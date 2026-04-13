@@ -347,6 +347,10 @@ function EmptyGrid({ showToppingBanner, showDrinkBanner }) {
 export function ProductCard({ product, onImageLoad }) {
   const { getStatus, handleIncrement, handleDecrement } = useCart();
   const { blocked, incBlocked, qty } = getStatus(product.id);
+  const ImageUrl = `${import.meta.env.BASE_URL}${product.url}`.replace(
+    "//",
+    "/",
+  );
 
   // THAY ĐỔI: khi ProductImage báo load xong, bubble id lên Grid
   const handleImgLoad = useCallback(() => {
@@ -359,7 +363,7 @@ export function ProductCard({ product, onImageLoad }) {
         {/* THAY ĐỔI: dùng ProductImage thay vì ImagePlaceholder tĩnh
             Truyền imageUrl từ product data (thêm mới trong api.js)
             Truyền onLoad callback để Grid theo dõi tiến độ ảnh */}
-        <ProductImage imageUrl={product.url} onLoad={handleImgLoad} />
+        <ProductImage imageUrl={ImageUrl} onLoad={handleImgLoad} />
         <Badge type={product.badge} />
       </div>
 
