@@ -1,0 +1,18 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app__body {
+  flex-shrink: 0;
+  min-height: 100vh;
+  display: flex;
+  flex: 1;
+}
+
+.app__main {
+  flex: 1;
+  padding: 22px 28px;
+  overflow-y: auto;
+}

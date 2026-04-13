@@ -1,0 +1,70 @@
+@import url("https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;1,400&display=swap");
+
+:root {
+  --bg: #111110;
+  --surface: #1a1a18;
+  --surface2: #222220;
+  --surface3: #252523;
+  --border: #2e2e2c;
+  --text: #e8e6e1;
+  --text-muted: #7a7872;
+  --text-dim: #4a4a48;
+  --accent: #c8a96e;
+  --accent-soft: rgba(200, 169, 110, 0.1);
+  --accent-hover: #d4b87a;
+  --navbar-bg: rgba(17, 17, 16, 0.92);
+  --user-menu-box-shadow: rgba(0, 0, 0, 0.6);
+  --user-menu-btn: #1e1e1c;
+  --user-menu-btn-primary: #111;
+  --red: #d64f3c;
+  --loading-bg: rgba(28, 28, 28, 0.8);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --font-base: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", serif;
+
+  --transition-fast: 0.15s ease;
+  --transition-med: 0.2s ease;
+}
+
+:root.light {
+  /* Nhóm Background & Surface */
+  --bg: #fbfaf7;
+  --surface: #ffffff;
+  --surface2: #f2f0eb;
+  --surface3: #e5e3de;
+  --border: #d4d2cc;
+
+  /* Nhóm Typography */
+  --text: #1a1a18;
+  --text-muted: #6e6c67;
+  --text-dim: #a3a19c;
+
+  /* Nhóm Accent (Màu nhấn) */
+  --accent: #ad8f51;
+  --accent-soft: rgba(173, 143, 81, 0.1);
+  --accent-hover: #947841;
+  --red: #d64f3c;
+  --navbar-bg: rgba(251, 250, 247, 0.92);
+  --user-menu-box-shadow: rgba(26, 26, 24, 0.08);
+  --user-menu-btn: #ffffff;
+  --user-menu-btn-primary: #fbfaf7;
+  --loading-bg: rgba(255, 255, 255, 0.8);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  --font-base: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  --font-display: "Playfair Display", serif;
+
+  --transition-fast: 0.15s ease;
+  --transition-med: 0.2s ease;
+}

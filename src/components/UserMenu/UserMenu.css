@@ -1,0 +1,102 @@
+.user-menu {
+  position: relative;
+}
+
+.user-menu__trigger {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-med);
+}
+
+.user-menu__trigger:hover,
+.user-menu__trigger--open {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.user-menu__trigger svg {
+  stroke: var(--text-muted);
+  transition: stroke var(--transition-med);
+}
+
+.user-menu__trigger:hover svg,
+.user-menu__trigger--open svg {
+  stroke: var(--accent);
+}
+
+.user-menu__popup {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 10px;
+  box-shadow: 0 16px 40px var(--user-menu-box-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 200;
+
+  opacity: 0;
+  transform: translateY(-6px) scale(0.97);
+  pointer-events: none;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.user-menu__popup--visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.user-menu__btn {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--user-menu-btn);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all var(--transition-fast);
+  letter-spacing: 0.2px;
+}
+
+.user-menu__btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.user-menu__btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--user-menu-btn-primary);
+}
+
+.user-menu__btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+  color: var(--user-menu-btn-primary);
+}
+.btn--danger {
+  border-color: rgba(214, 79, 60, 0.4);
+  color: #ff7c6e;
+}
+
+.btn--danger:hover {
+  background: rgba(214, 79, 60, 0.1);
+  border-color: var(--red);
+}

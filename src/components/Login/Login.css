@@ -1,0 +1,165 @@
+.login-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* ── Hero section ── */
+.login-hero {
+  flex: 1;
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.login-hero__bg {
+  position: absolute;
+  inset: 0;
+  background-image: url("https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&q=80");
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.45);
+}
+
+.login-hero__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.5) 0%,
+    rgba(0, 0, 0, 0.2) 100%
+  );
+}
+
+/* ── Form card ── */
+.login-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 380px;
+  flex-shrink: 0;
+  height: 60vh;
+  padding: 36px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+}
+
+.login-card__title {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+.login-card__input {
+  width: 100%;
+  padding: 11px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.login-card__input::placeholder {
+  color: #888;
+}
+
+.login-card__input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(200, 169, 110, 0.2);
+}
+
+/* [MỚI] Wrapper bọc input mật khẩu + nút toggle */
+.login-card__pwd-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* input bên trong wrapper cần padding-right để không bị chữ đè */
+.login-card__pwd-wrap .login-card__input {
+  width: 100%;
+  padding-right: 42px;
+}
+
+/* [MỚI] Nút ẩn/hiện mật khẩu */
+.login-card__pwd-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.login-card__pwd-toggle:hover {
+  color: #111;
+}
+
+.login-card__btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--user-menu-btn-primary);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  margin-top: 4px;
+  letter-spacing: 0.3px;
+}
+
+.login-card__btn:hover {
+  background: #222;
+}
+
+.login-card__footer-text {
+  text-align: center;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.login-card__footer-text a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.login-card__footer-text a:hover {
+  text-decoration: underline;
+}
+
+.login-card__error {
+  background: rgba(214, 79, 60, 0.15);
+  border: 1px solid rgba(214, 79, 60, 0.4);
+  border-radius: var(--radius-md);
+  color: #ff7c6e;
+  font-size: 12px;
+  padding: 9px 12px;
+  text-align: center;
+}
