@@ -19,6 +19,7 @@ const DB = {
       name: "Lạp xưởng + bò + đậu",
       price: "33.000đ",
       cats: ["best-seller", "set"],
+      url: "/img/lap-xuong-bo-dau.jpg",
       badge: "hot",
     },
     {
@@ -209,13 +210,13 @@ const DB = {
 
   user: {
     id: "u-001",
-    lastName: "Nguyễn",
-    firstName: "Văn Hùng",
-    email: "hung.nguyen@email.com",
-    phone: "0912 345 678",
-    address: "12 Lý Thường Kiệt, Hoàn Kiếm",
-    city: "Hà Nội",
-    dob: "1995-08-20",
+    lastName: "",
+    firstName: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    dob: "",
     tier: "Khách thân thiết",
   },
 
@@ -230,42 +231,42 @@ const DB = {
   },
 
   orders: [
-    {
-      id: "#DH-20240401",
-      date: "01/04/2024",
-      status: "pending",
-      items: [
-        { name: "Bún trộn đặc biệt", qty: 1, price: "70.000đ", emoji: "🍜" },
-      ],
-      total: "70.000đ",
-    },
-    {
-      id: "#DH-20240315",
-      date: "15/03/2024",
-      status: "delivered",
-      items: [
-        { name: "Lẩu xương + bữ + đậu", qty: 1, price: "31.000đ", emoji: "🍲" },
-        { name: "Set nem nướng", qty: 2, price: "70.000đ", emoji: "🥩" },
-      ],
-      total: "171.000đ",
-    },
-    {
-      id: "#DH-20240228",
-      date: "28/02/2024",
-      status: "delivered",
-      items: [
-        { name: "Trà sữa trân châu", qty: 2, price: "35.000đ", emoji: "🧋" },
-        { name: "Bánh flan trứng", qty: 3, price: "25.000đ", emoji: "🍮" },
-      ],
-      total: "145.000đ",
-    },
-    {
-      id: "#DH-20240210",
-      date: "10/02/2024",
-      status: "cancelled",
-      items: [{ name: "Set rong biển", qty: 1, price: "33.000đ", emoji: "🍱" }],
-      total: "33.000đ",
-    },
+    // {
+    //   id: "#DH-20240401",
+    //   date: "01/04/2024",
+    //   status: "pending",
+    //   items: [
+    //     { name: "Bún trộn đặc biệt", qty: 1, price: "70.000đ", emoji: "🍜" },
+    //   ],
+    //   total: "70.000đ",
+    // },
+    // {
+    //   id: "#DH-20240315",
+    //   date: "15/03/2024",
+    //   status: "delivered",
+    //   items: [
+    //     { name: "Lẩu xương + bữ + đậu", qty: 1, price: "31.000đ", emoji: "🍲" },
+    //     { name: "Set nem nướng", qty: 2, price: "70.000đ", emoji: "🥩" },
+    //   ],
+    //   total: "171.000đ",
+    // },
+    // {
+    //   id: "#DH-20240228",
+    //   date: "28/02/2024",
+    //   status: "delivered",
+    //   items: [
+    //     { name: "Trà sữa trân châu", qty: 2, price: "35.000đ", emoji: "🧋" },
+    //     { name: "Bánh flan trứng", qty: 3, price: "25.000đ", emoji: "🍮" },
+    //   ],
+    //   total: "145.000đ",
+    // },
+    // {
+    //   id: "#DH-20240210",
+    //   date: "10/02/2024",
+    //   status: "cancelled",
+    //   items: [{ name: "Set rong biển", qty: 1, price: "33.000đ", emoji: "🍱" }],
+    //   total: "33.000đ",
+    // },
   ],
 
   notices: [
@@ -331,7 +332,7 @@ const DB = {
     },
   ],
 
-  cart: null,
+  cart: {},
 };
 
 //make proxy to store in localstorage
@@ -497,16 +498,20 @@ export async function updateSettings(fields) {
    CART
 ════════════════════════════════════════════ */
 
-/** GET /cart */
+/** GET /cart — lấy giỏ hàng đã lưu */
 export async function fetchCart() {
-  await delay(400, 800);
+  await delay(300, 600);
   return respond(deepClone(simulateDB.cart));
 }
 
-/** PUT /cart */
-export async function updateCart(product) {
-  await delay(500, 900);
-  simulateDB.cart = { ...simulateDB.cart, product };
+/*
+ * PUT /cart — ghi đè toàn bộ giỏ hàng
+ *  @param {{ [productId: number]: number }} cartData
+ */
+
+export async function updateCart(cartData) {
+  await delay(200, 500);
+  simulateDB.cart = deepClone(cartData);
   return respond({ success: true, cart: deepClone(simulateDB.cart) });
 }
 /* ════════════════════════════════════════════

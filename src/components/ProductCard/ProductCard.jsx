@@ -345,12 +345,20 @@ function EmptyGrid({ showToppingBanner, showDrinkBanner }) {
       Sau:   nhận callback onImageLoad(id) để bubble lên ProductGrid
    ═══════════════════════════════════════════ */
 export function ProductCard({ product, onImageLoad }) {
-  const { getStatus, handleIncrement, handleDecrement } = useCart();
+  const { getStatus, handleIncrement, handleDecrement, handleBedDecrement } =
+    useCart();
   const { blocked, incBlocked, qty } = getStatus(product.id);
   const ImageUrl = `${import.meta.env.BASE_URL}${product.url}`.replace(
     "//",
     "/",
   );
+
+  const isBed = product.cats?.includes("bed");
+
+  // THAY ĐỔI: dùng handleBedDecrement nếu là sản phẩm set,
+  // handleDecrement thông thường cho các loại khác
+  const onDecrement = (e) =>
+    isBed ? handleBedDecrement(product.id, e) : handleDecrement(product.id, e);
 
   // THAY ĐỔI: khi ProductImage báo load xong, bubble id lên Grid
   const handleImgLoad = useCallback(() => {
@@ -418,7 +426,7 @@ export function ProductCard({ product, onImageLoad }) {
             <div className="product-card__qty">
               <button
                 className="product-card__qty-btn product-card__qty-btn--dec"
-                onClick={(e) => handleDecrement(product.id, e)}
+                onClick={(e) => onDecrement(e)}
                 aria-label="Giảm số lượng"
               >
                 {qty === 1 ? (

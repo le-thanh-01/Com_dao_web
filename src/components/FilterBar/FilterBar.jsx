@@ -1,11 +1,19 @@
 import "./FilterBar.css";
+import { useState } from "react";
 
 const FILTERS = [
-  { id: "all",  label: "Tất cả" },
-  { id: "new",  label: "Mới" },
+  { id: "all", label: "Tất cả" },
+  { id: "new", label: "Mới" },
 ];
 
-export default function FilterBar({ activeFilter, onFilterChange }) {
+export default function FilterBar({
+  activeFilter,
+  onFilterChange,
+  activeSort,
+  onSortChange,
+}) {
+  //false là giảm dần, true là tăng dần
+  const [sort_type, setSortType] = useState(false);
   return (
     <div className="filter-bar">
       {FILTERS.map((f) => (
@@ -28,7 +36,15 @@ export default function FilterBar({ activeFilter, onFilterChange }) {
         Chương trình khuyến mãi
       </button>
 
-      <button className="filter-bar__sort">Giảm giá ↓</button>
+      <button
+        className="filter-bar__sort"
+        onClick={() => {
+          setSortType(!sort_type);
+          onSortChange(sort_type ? "asc" : "desc");
+        }}
+      >
+        {sort_type ? "↓" : "↑"}
+      </button>
     </div>
   );
 }

@@ -16,10 +16,25 @@ import "../system/api";
 import "./styles/global.css";
 import "./App.css";
 
+const parseCurrency = (str) => {
+  if (typeof str !== "string") return 0;
+  const num = parseFloat(str.replace("đ", "").trim());
+  return isNaN(num) ? 0 : num;
+};
+
+const compareCost = (sort_type) => (a, b) => {
+  if (sort_type === "asc")
+    return parseCurrency(a.price) - parseCurrency(b.price);
+  if (sort_type === "desc")
+    return parseCurrency(b.price) - parseCurrency(a.price);
+  return 0;
+};
+
 export default function App() {
   const [page, setPage] = useState("home");
   const [activeCategory, setActiveCategory] = useState("best-seller");
   const [activeFilter, setActiveFilter] = useState("all");
+  const [activeSort, setActiveSort] = useState(null);
   const [searchValue, setSearchValue] = useState("");
   const { userSettings, settingsLoading: loading } = useUserSettings();
 
@@ -49,21 +64,23 @@ export default function App() {
 
   if (loading) return <PageLoader></PageLoader>;
 
-  const filteredProducts = products.filter((p) => {
-    const matchCat = p.cats.includes(activeCategory);
-    const matchSearch = p.name
-      .toLowerCase()
-      .includes(searchValue.toLowerCase());
-    const matchFilter =
-      activeFilter === "all"
-        ? true
-        : activeFilter === "new"
-          ? p.badge === "new"
-          : activeFilter === "promo"
-            ? p.badge === "hot"
-            : true;
-    return matchCat && matchSearch && matchFilter;
-  });
+  const filteredProducts = products
+    .filter((p) => {
+      const matchCat = p.cats.includes(activeCategory);
+      const matchSearch = p.name
+        .toLowerCase()
+        .includes(searchValue.toLowerCase());
+      const matchFilter =
+        activeFilter === "all"
+          ? true
+          : activeFilter === "new"
+            ? p.badge === "new"
+            : activeFilter === "promo"
+              ? p.badge === "hot"
+              : true;
+      return matchCat && matchSearch && matchFilter;
+    })
+    .sort(compareCost(activeSort));
 
   return (
     <div className="app">
@@ -85,6 +102,8 @@ export default function App() {
           <FilterBar
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
+            activeSort={activeSort}
+            onSortChange={setActiveSort}
           />
           {productsError ? (
             <ErrorBlock message={productsError} />

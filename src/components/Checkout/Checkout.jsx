@@ -1,15 +1,10 @@
 import { useState } from "react";
 import { useCart } from "../../context/CartContext";
-import {
-  useProducts,
-  useOrders,
-  useLoginState,
-} from "../../context/DataContext";
+import { useProducts, useOrders } from "../../context/DataContext";
 import { placeOrder, validatePromo } from "../../../system/api";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
 import { Spinner } from "../Skeleton/Skeleton";
-import { QuotaBannerWrapper } from "../ProductCard/ProductCard";
 import "./Checkout.css";
 
 /* ─── helpers ─── */
@@ -49,56 +44,45 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 /* ─── Qty stepper in table row ─── */
-const Stepper = ({ product }) => {
-  const { getStatus, handleIncrement, handleDecrement } = useCart();
-  const { blocked, incBlocked, qty } = getStatus(product.id);
-
-  return (
-    <div className="product-card__qty">
-      <button
-        className="product-card__qty-btn product-card__qty-btn--dec"
-        onClick={(e) => handleDecrement(product.id, e)}
-        aria-label="Giảm số lượng"
-      >
-        {qty === 1 ? (
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <polyline points="3 6 5 6 21 6" />
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            <path d="M10 11v6M14 11v6" />
-            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-          </svg>
-        ) : (
-          "−"
-        )}
-      </button>
-      <span className="product-card__qty-count">{qty}</span>
-      <button
-        className="product-card__qty-btn product-card__qty-btn--inc"
-        onClick={(e) => handleIncrement(product.id, e)}
-        disabled={incBlocked}
-        style={incBlocked ? { opacity: 0.35, cursor: "not-allowed" } : {}}
-        aria-label="Tăng số lượng"
-      >
-        +
-      </button>
-    </div>
-  );
-};
+const Stepper = ({ qty, onInc, onDec }) => (
+  <div className="co-stepper">
+    <button className="co-stepper__btn co-stepper__btn--dec" onClick={onDec}>
+      {qty === 1 ? (
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="3 6 5 6 21 6" />
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+          <path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+        </svg>
+      ) : (
+        "−"
+      )}
+    </button>
+    <span className="co-stepper__count">{qty}</span>
+    <button className="co-stepper__btn co-stepper__btn--inc" onClick={onInc}>
+      +
+    </button>
+  </div>
+);
 
 /* ─── Main component ─── */
 export default function Checkout({ onNavigate }) {
-  const { cart, handleIncrement, handleDecrement, setQty, clearCart } =
-    useCart();
+  const {
+    cart,
+    handleIncrement,
+    handleDecrement,
+    handleBedDecrement,
+    setQty,
+    clearCart,
+  } = useCart();
   const { products } = useProducts();
   const { refetch: refetchOrders } = useOrders();
-  const { loginState } = useLoginState();
 
   // Pre-order
   const [preorder, setPreorder] = useState(false);
@@ -157,7 +141,6 @@ export default function Checkout({ onNavigate }) {
 
   const handleOrder = async () => {
     if (cartItems.length === 0 || orderLoading) return;
-    if (!loginState) onNavigate?.("login");
     setOrderLoading(true);
     const { data, error } = await placeOrder({
       items: cartItems.map((i) => ({
@@ -288,72 +271,75 @@ export default function Checkout({ onNavigate }) {
                   </button>
                 </div>
               ) : (
-                <>
-                  <QuotaBannerWrapper type="topping" />
-                  <QuotaBannerWrapper type="drink" />
-                  <br />
-                  <table className="co-table">
-                    <thead>
-                      <tr>
-                        <th>Món ăn</th>
-                        <th>Số lượng</th>
-                        <th>Đơn giá</th>
-                        <th>Thành tiền</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {cartItems.map((item) => (
-                        <tr key={item.id}>
-                          <td>
-                            <div className="co-product">
-                              <div className="co-product__emoji">
-                                {PRODUCT_EMOJIS[item.id] || "🍽️"}
-                              </div>
-                              <div>
-                                <div className="co-product__name">
-                                  {item.name}
-                                  {item.badge && (
-                                    <span className="co-product__badge">
-                                      {item.badge === "hot" ? "HOT" : "MỚI"}
-                                    </span>
-                                  )}
-                                </div>
+                <table className="co-table">
+                  <thead>
+                    <tr>
+                      <th>Món ăn</th>
+                      <th>Số lượng</th>
+                      <th>Đơn giá</th>
+                      <th>Thành tiền</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cartItems.map((item) => (
+                      <tr key={item.id}>
+                        <td>
+                          <div className="co-product">
+                            <div className="co-product__emoji">
+                              {PRODUCT_EMOJIS[item.id] || "🍽️"}
+                            </div>
+                            <div>
+                              <div className="co-product__name">
+                                {item.name}
+                                {item.badge && (
+                                  <span className="co-product__badge">
+                                    {item.badge === "hot" ? "HOT" : "MỚI"}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          </td>
-                          <td>
-                            <Stepper product={item} />
-                          </td>
-                          <td className="co-price">
-                            {item.free ? "Miễn phí" : item.price}
-                          </td>
-                          <td className="co-subtotal">
-                            {item.free ? "—" : formatPrice(item.subtotal)}
-                          </td>
-                          <td className="co-remove">
-                            <button
-                              className="co-remove__btn"
-                              onClick={() => setQty(item.id, 0)}
+                          </div>
+                        </td>
+                        <td>
+                          <Stepper
+                            qty={item.qty}
+                            onInc={(e) => handleIncrement(item.id, e)}
+                            onDec={(e) =>
+                              item.cats?.includes("bed")
+                                ? handleBedDecrement(item.id, e)
+                                : handleDecrement(item.id, e)
+                            }
+                          />
+                        </td>
+                        <td className="co-price">
+                          {item.free ? "Miễn phí" : item.price}
+                        </td>
+                        <td className="co-subtotal">
+                          {item.free ? "—" : formatPrice(item.subtotal)}
+                        </td>
+                        <td className="co-remove">
+                          <button
+                            className="co-remove__btn"
+                            onClick={() => setQty(item.id, 0)}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
                             >
-                              <svg
-                                width="14"
-                                height="14"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <line x1="18" y1="6" x2="6" y2="18" />
-                                <line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </>
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               )}
             </div>
           </div>

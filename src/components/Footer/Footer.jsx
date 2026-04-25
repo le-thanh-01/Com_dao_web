@@ -1,13 +1,5 @@
-import { FOOTER_LINKS } from "../../constants/footerLinks.js";
+import { FOOTER_LINKS, SOCIALS } from "../../constants/footerLinks.js";
 import "./Footer.css";
-
-const SOCIALS = [
-  { icon: "𝕏", link: "https://x.com/?lang=vi" },
-  { icon: "Z", link: "https://zalo.me/pc" },
-  { icon: "f", link: "https://www.facebook.com/?locale=vi_VN" },
-  { icon: "ig", link: "https://www.instagram.com/" },
-  { icon: "i", link: "/ref.html" },
-];
 
 export default function Footer() {
   return (

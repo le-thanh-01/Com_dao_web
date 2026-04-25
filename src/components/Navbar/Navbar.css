@@ -54,6 +54,7 @@
 .navbar__search {
   display: flex;
   align-items: center;
+  /* margin-left: auto; */
   gap: 8px;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -87,6 +88,13 @@
 .navbar__search input::placeholder {
   color: var(--text-dim);
 }
+
+.Navbar-icon {
+  display: flex;
+  margin-left: auto;
+  align-items: center;
+}
+
 .navbar__cart-btn {
   position: relative;
   width: 36px;
@@ -128,11 +136,57 @@
   animation: badgePop 0.2s ease;
 }
 
+.desktop-menu {
+  display: flex;
+  flex-grow: 1;
+}
+
 @keyframes badgePop {
   from {
     transform: scale(0.6);
   }
   to {
     transform: scale(1);
+  }
+}
+
+.mobile-menu-btn {
+  display: none; /* Ẩn nút trên desktop */
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.mobile-dropdown {
+  display: none; /* Ẩn menu dropdown của mobile trên desktop */
+}
+
+/* Áp dụng Media Query khi W < 768px (Điện thoại/Tablet) */
+@media (max-width: 768px) {
+  .desktop-menu {
+    display: none; /* Ẩn danh sách đầy đủ */
+  }
+
+  .mobile-menu-btn {
+    display: block; /* Hiển thị nút danh sách */
+  }
+
+  .mobile-dropdown {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 52px;
+    left: 0;
+    width: 100%;
+    background: var(--navbar-bg);
+    list-style: none;
+    padding: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-dropdown ul {
+    flex-direction: column;
+    align-items: start;
   }
 }

@@ -133,8 +133,9 @@ export function DataProvider({ children }) {
   const userCart = useResource(fetchCart);
 
   const updateUserCart = useCallback(
-    async (fields) => {
-      const { data, error } = await updateCart(fields);
+    async (cartData) => {
+      // if (!loginState) return { data: null, error: null };
+      const { data, error } = await updateCart(cartData);
       if (!error) {
         userCart.refetch();
       }
@@ -259,7 +260,7 @@ export const useUserSettings = () => {
 export const useUserCart = () => {
   const { cart } = useContext(DataContext);
   return {
-    userCart: cart.userCart,
+    userCart: cart.data ?? {},
     loading: cart.loading,
     error: cart.error,
     updateUserCart: cart.updateUserCart,

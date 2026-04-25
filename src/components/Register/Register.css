@@ -22,6 +22,7 @@
   flex: 1;
   min-width: 0;
   padding-right: 48px;
+  padding-bottom: 12px;
 }
 
 .register-form-col__title {
@@ -170,6 +171,7 @@
   }
   .register-form-col {
     padding-right: 0;
+    width: 100%;
   }
   .register-image-col {
     flex: none;

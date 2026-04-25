@@ -4,7 +4,7 @@ import { resolve } from "path";
 
 export default defineConfig({
   plugins: [react()],
-  base: "Com_dao_web",
+  base: "/Com_dao_web/",
   build: {
     rollupOptions: {
       // Khai báo các điểm đầu vào (Entry points) của dự án
