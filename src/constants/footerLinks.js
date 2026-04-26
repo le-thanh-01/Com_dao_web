@@ -6,12 +6,12 @@ export const SOCIALS = [
   { icon: "Z", link: "https://zalo.me/pc" },
   { icon: "f", link: "https://www.facebook.com/?locale=vi_VN" },
   { icon: "ig", link: "https://www.instagram.com/" },
-  { icon: "i", link: path + "ref.html" },
+  { icon: "i", link: path + "pages/ref.html" },
 ];
 
 export const FOOTER_LINKS = {
   "Về chúng tôi": [
-    { content: "Giới thiệu", link: path + "about.html" },
+    { content: "Giới thiệu", link: path + "pages/about.html" },
     { content: "Góp ý", link: "#" },
     { content: "Báo lỗi", link: "#" },
   ],

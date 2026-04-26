@@ -24,12 +24,21 @@ const DB = {
     },
     {
       id: 2,
+      name: "Set mix ngẫu nhiên",
+      price: "33.000đ",
+      cats: ["best-seller", "set"],
+      url: "/img/tu-mix.jpg",
+      badge: "hot",
+    },
+    {
+      id: 3,
       name: "Set rong biển",
       price: "33.000đ",
       cats: ["best-seller", "set"],
       url: "/img/set-rong-bien.jpg",
       badge: "new",
     },
+
     {
       id: 4,
       name: "Cơm mắm tép chưng thịt",

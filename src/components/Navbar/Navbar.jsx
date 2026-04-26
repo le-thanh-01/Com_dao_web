@@ -45,7 +45,7 @@ export default function Navbar({
                   if (link === "CSKH") {
                     // Trả về '/' hoặc '/ten-repo/'
                     const baseUrl = import.meta.env.BASE_URL;
-                    const path = `${baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"}help.html`;
+                    const path = `${baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"}pages/help.html`;
                     window.open(path, "_blank");
                   }
                 }}
