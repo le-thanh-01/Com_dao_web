@@ -406,6 +406,28 @@ export const FOOTER_LINKS = {
 };
 ```
 
+**Lưu ý:** Trường hợp trang mới là html độp lập, file html nên được đưa vào public/pages/
+
+Nếu file html cũng dùng react hoặc tái sử dụng các thành phần của index.html, thì nên để cùng cấp với index.html và khai báo trong vite.config.js:
+
+```js
+//vite.config.js
+export default defineConfig({
+  plugins: [react()],
+  base: "/Com_dao_web/",
+  build: {
+    rollupOptions: {
+      // Khai báo các điểm đầu vào (Entry points) của dự án
+      input: {
+        main: resolve(__dirname, "index.html"),
+        about: resolve(__dirname, "about.html"),
+        // Nếu có thêm trang, cứ khai báo tiếp ở đây (ví dụ: contact: resolve(...))
+      },
+    },
+  },
+});
+```
+
 ### Thêm skeleton mới
 
 ```jsx

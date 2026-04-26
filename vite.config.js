@@ -10,7 +10,6 @@ export default defineConfig({
       // Khai báo các điểm đầu vào (Entry points) của dự án
       input: {
         main: resolve(__dirname, "index.html"),
-        about: resolve(__dirname, "about.html"),
         // Nếu có thêm trang, cứ khai báo tiếp ở đây (ví dụ: contact: resolve(...))
       },
     },
