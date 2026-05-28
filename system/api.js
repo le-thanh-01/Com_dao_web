@@ -5,12 +5,17 @@
  * Mỗi hàm trả về một Promise<{ data, error }> — không bao giờ
  * throw, giúp caller luôn xử lý được cả trường hợp lỗi.
  *
+ * Dữ liệu sẽ được lưu trữ tạm thời dưới dạng đối tượng DB trước khi
+ * có database thật. DB được lưu trên client trong local store
+ * với username là simulateDB.
+ *
  * Khi tích hợp server thật, chỉ cần thay phần body của từng hàm
  * bằng fetch() tương ứng — interface không đổi.
  * ──────────────────────────────────────────────────────────────
  */
 
-/* ── Dữ liệu gốc (thay bằng simulateDB thật khi deploy) ── */
+/* ── Dữ liệu gốc (thay bằng simulateDB khi chuyển qua lưu trữ
+    trong local storage của client) ── */
 const DB = {
   products: [
     //set
@@ -77,15 +82,40 @@ const DB = {
     },
 
     //Cơm
-    { id: 21, name: "Cơm đảo", price: "33.000đ", cats: ["bed"] },
-    { id: 22, name: "Cơm trắng", price: "33.000đ", cats: ["bed"] },
-    { id: 23, name: "Cơm đảo (mang về)", price: "33.000đ", cats: ["bed"] },
-    { id: 24, name: "Cơm trắng (mang về)", price: "33.000đ", cats: ["bed"] },
+    {
+      id: 21,
+      name: "Cơm đảo",
+      price: "33.000đ",
+      cats: ["bed"],
+      url: "/img/Com-dao.jpg",
+    },
+    {
+      id: 22,
+      name: "Cơm trắng",
+      price: "33.000đ",
+      cats: ["bed"],
+      url: "/img/Com-trang.jpg",
+    },
+    {
+      id: 23,
+      name: "Cơm đảo (mang về)",
+      price: "33.000đ",
+      cats: ["bed"],
+      url: "/img/Com-dao.jpg",
+    },
+    {
+      id: 24,
+      name: "Cơm trắng (mang về)",
+      price: "33.000đ",
+      cats: ["bed"],
+      url: "/img/Com-trang.jpg",
+    },
     {
       id: 25,
       name: "Cơm thêm (cho suất mang về)",
       price: "10.000đ",
       cats: ["bed"],
+      url: "/img/Com-dao.jpg",
     },
 
     //Topping
@@ -344,7 +374,7 @@ const DB = {
   cart: {},
 };
 
-//make proxy to store in localstorage
+// Lấy cơ sở dữ liệu ảo được lưu trên local storage
 const getSafeData = (key) => {
   const rawData = localStorage.getItem(key);
 
@@ -362,6 +392,14 @@ const getSafeData = (key) => {
 const localDB = getSafeData("simulateDB");
 let targetDB = localDB ? localDB : DB;
 
+/**
+ * Đối tượng simulateDB là một Proxy để vừa chứa dữ liệu của DB
+ * (hoặc simulateDB trong local storage) vừa lưu dữ liệu mới
+ * vào local storage khi được các component tác động.
+ *
+ * Tương tác với Đối tượng simulateDB tương tự như tương tác với
+ * 1 đối tượng thông thường.
+ */
 const DBHandler = {
   get(target, property) {
     const value = target[property];
@@ -390,8 +428,11 @@ const DBHandler = {
     return true;
   },
 };
-
 const simulateDB = new Proxy(targetDB, DBHandler);
+
+// lưu token nhận từ server vào local storage
+// (sẽ đổi sang nơi lưu trữ bảo mật hơn sau)
+const token = localStorage.getItem("access-token");
 
 /* ── Utility ── */
 const delay = (min = 400, max = 900) =>
@@ -407,8 +448,21 @@ const deepClone = (val) => JSON.parse(JSON.stringify(val));
 ════════════════════════════════════════════ */
 
 /** GET /products */
+// export async function fetchProducts() {
+//   const res = await fetch("/api/v1/products", {
+//     headers: { Authorization: `Bearer ${token}` },
+//   });
+//   if (!res.ok) {
+//     const errorText = await res.text();
+//     return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+//   }
+//   const data = await res.json();
+//   if (!data) return fail("not find data");
+//   return { data, error: null };
+// }
+
 export async function fetchProducts() {
-  await delay(500, 900);
+  await delay(300, 600);
   return respond(deepClone(simulateDB.products));
 }
 
@@ -423,41 +477,135 @@ export async function fetchCategories() {
 ════════════════════════════════════════════ */
 
 /** POST /auth/login */
-export async function login({ phone, password }) {
-  await delay(600, 1100);
-  if (!phone || !password) return fail("Vui lòng nhập đầy đủ thông tin.");
-  if (simulateDB.user.password !== password || simulateDB.user.phone !== phone)
-    return fail("Mật khẩu hoặc SĐT không đúng.");
-  simulateDB.loginState = true;
-  return respond({
-    token: "mock-jwt-token-abc123",
-    user: deepClone(simulateDB.user),
+export async function login({ username, password }) {
+  if (!username || !password) return fail("Vui lòng nhập đầy đủ thông tin.");
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ username, password }),
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
+  token = data.jwt;
+
+  if (token) {
+    // 4. Lưu Token vào localStorage để dùng cho các request sau này
+    console.log(token);
+    localStorage.setItem("access_token", token);
+    if (data.password !== password || data.phone !== phone)
+      return fail("Mật khẩu hoặc SĐT không đúng.");
+    simulateDB.loginState = true;
+    return respond({
+      token: token,
+      user: deepClone(data),
+    });
+  } else {
+    return fail("Server không trả về mã token");
+  }
 }
+
+// export async function login({ username, password }) {
+//   await delay(600, 1100);
+//   if (!username || !password) return fail("Vui lòng nhập đầy đủ thông tin.");
+//   if (
+//     simulateDB.user.password !== password ||
+//     (simulateDB.user.phone !== username && simulateDB.user.email !== username)
+//   )
+//     return fail("Mật khẩu hoặc SĐT không đúng.");
+//   simulateDB.loginState = true;
+//   return respond({
+//     token: "mock-jwt-token-abc123",
+//     user: deepClone(simulateDB.user),
+//   });
+// }
 
 /** POST /auth/register */
 export async function register(fields) {
-  await delay(700, 1200);
   const { firstName, lastName, email, phone, password } = fields;
-  if (!firstName || !lastName || !email || !phone || !password)
+  if (!firstName || !lastName || (!email && !phone) || !password)
     return fail("Vui lòng điền đầy đủ thông tin.");
+
   if (password.length < 6) return fail("Mật khẩu phải có ít nhất 6 ký tự.");
-  simulateDB.user = { ...simulateDB.user, ...fields };
-  return respond({ success: true, message: "Đăng ký thành công!" });
+
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
+  token = data.jwt;
+
+  if (token) {
+    // 4. Lưu Token vào localStorage để dùng cho các request sau này
+    console.log(token);
+    localStorage.setItem("access_token", token);
+    return respond({
+      token: token,
+      user: deepClone(data),
+    });
+  } else {
+    return fail("Server không trả về mã token");
+  }
 }
+
+// export async function register(fields) {
+//   await delay(700, 1200);
+//   const { firstName, lastName, email, phone, password } = fields;
+//   if (!firstName || !lastName || (!email && !phone) || !password)
+//     return fail("Vui lòng điền đầy đủ thông tin.");
+
+//   if (password.length < 6) return fail("Mật khẩu phải có ít nhất 6 ký tự.");
+//   simulateDB.user = { ...simulateDB.user, ...fields };
+//   return respond({ success: true, message: "Đăng ký thành công!" });
+// }
 
 /** POST /auth/logout */
 export async function logout() {
-  await delay(500, 900);
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ loginState: false }),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
   simulateDB.loginState = false;
   return respond({ success: true });
 }
+
+// export async function logout() {
+//   await delay(500, 900);
+//   simulateDB.loginState = false;
+//   return respond({ success: true });
+// }
 
 /* ════════════════════════════════════════════
    STATUS
 ════════════════════════════════════════════ */
 
 /** GET loginState */
+
 export async function fetchLoginState() {
   await delay(400, 800);
   return respond(deepClone(simulateDB.loginState));
@@ -469,19 +617,54 @@ export async function fetchLoginState() {
 
 /** GET /user/profile */
 export async function fetchProfile() {
-  await delay(400, 800);
-  return respond(deepClone(simulateDB.user));
+  await fetch(BASE_URL + "/api/v1/user/profile", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+  })
+    .then((res) => {
+      if (res.ok) return res.json();
+      // else throw new Error("Ngu");
+    })
+    .then((data) => console.log(data))
+    .catch((ex) => console.log(ex));
+  return respond(data);
 }
+
+// export async function fetchProfile() {
+//    await delay(500, 900);
+//   return respond(deepClone(simulateDB.user));
+// }
 
 /** PUT /user/profile */
 export async function updateProfile(fields) {
-  await delay(500, 900);
-  if (fields?.delete === true) {
-    targetDB = DB;
-    localStorage.removeItem("simulateDB");
-  } else simulateDB.user = { ...simulateDB.user, ...fields };
-  return respond({ success: true, user: deepClone(simulateDB.user) });
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/profile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
+  return respond(await fetchProfile());
 }
+
+// export async function updateProfile(fields) {
+//   await delay(500, 900);
+//   if (fields?.delete === true) {
+//     targetDB = DB;
+//     localStorage.removeItem("simulateDB");
+//   } else simulateDB.user = { ...simulateDB.user, ...fields };
+//   return respond({ success: true, user: deepClone(simulateDB.user) });
+// }
 
 /* ════════════════════════════════════════════
    SETTING
@@ -489,19 +672,54 @@ export async function updateProfile(fields) {
 
 /** GET /settings */
 export async function fetchSettings() {
-  await delay(400, 800);
-  return respond(deepClone(simulateDB.settings));
+  await fetch(BASE_URL + "/api/v1/user/settings", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+  })
+    .then((res) => {
+      if (res.ok) return res.json();
+      // else throw new Error("Ngu");
+    })
+    .then((data) => console.log(data))
+    .catch((ex) => console.log(ex));
+  return respond(data);
 }
+
+// export async function fetchSettings() {
+//   await delay(400, 800);
+//   return respond(deepClone(simulateDB.settings));
+// }
 
 /** PUT /settings */
 export async function updateSettings(fields) {
-  await delay(500, 900);
-  simulateDB.settings = { ...simulateDB.settings, ...fields };
-  return respond({
-    success: true,
-    settings: deepClone(simulateDB.settings),
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/settings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(fields),
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
+  return respond(await fetchSettings());
 }
+
+// export async function updateSettings(fields) {
+//   await delay(500, 900);
+//   simulateDB.settings = { ...simulateDB.settings, ...fields };
+//   return respond({
+//     success: true,
+//     settings: deepClone(simulateDB.settings),
+//   });
+// }
 
 /* ════════════════════════════════════════════
    CART
@@ -509,9 +727,26 @@ export async function updateSettings(fields) {
 
 /** GET /cart — lấy giỏ hàng đã lưu */
 export async function fetchCart() {
-  await delay(300, 600);
-  return respond(deepClone(simulateDB.cart));
+  await fetch(BASE_URL + "/api/v1/user/cart", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+  })
+    .then((res) => {
+      if (res.ok) return res.json();
+      // else throw new Error("Ngu");
+    })
+    .then((data) => console.log(data))
+    .catch((ex) => console.log(ex));
+  return respond(data);
 }
+
+// export async function fetchCart() {
+//   await delay(300, 600);
+//   return respond(deepClone(simulateDB.cart));
+// }
 
 /*
  * PUT /cart — ghi đè toàn bộ giỏ hàng
@@ -519,19 +754,54 @@ export async function fetchCart() {
  */
 
 export async function updateCart(cartData) {
-  await delay(200, 500);
-  simulateDB.cart = deepClone(cartData);
-  return respond({ success: true, cart: deepClone(simulateDB.cart) });
+  const res = await fetch("https://10.245.107.123:8080/api/v1/auth/cart", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(cartData),
+  });
+  if (!res.ok) {
+    const errorText = await res.text();
+    return fail(`Lỗi Server [${res.status}]: ${errorText}`);
+  }
+  if (!data) return fail("not find data");
+  const data = await res.json();
+  console.log(data);
+  return respond(await fetchCart());
 }
+
+// export async function updateCart(cartData) {
+//   await delay(200, 500);
+//   simulateDB.cart = deepClone(cartData);
+//   return respond({ success: true, cart: deepClone(simulateDB.cart) });
+// }
 /* ════════════════════════════════════════════
    ORDERS
 ════════════════════════════════════════════ */
 
 /** GET /orders */
 export async function fetchOrders() {
-  await delay(500, 1000);
-  return respond(deepClone(simulateDB.orders));
+  await fetch(BASE_URL + "/api/v1/user/orders", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token,
+    },
+  })
+    .then((res) => {
+      if (res.ok) return res.json();
+      // else throw new Error("Ngu");
+    })
+    .then((data) => console.log(data))
+    .catch((ex) => console.log(ex));
+  return respond(data);
 }
+
+// export async function fetchOrders() {
+//   await delay(500, 1000);
+//   return respond(deepClone(simulateDB.orders));
+// }
 
 /** POST /orders */
 export async function placeOrder(payload) {

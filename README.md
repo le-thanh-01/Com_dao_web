@@ -28,7 +28,7 @@
 ## Cài đặt và chạy trang
 
 ```bash
-#clone dự án về máy
+# Clone dự án về máy
 git clone https://github.com/le-thanh-01/Com_dao_web
 
 cd Com_dao_web
@@ -118,7 +118,7 @@ Com_dao_web/
         └── Checkout/
             ├── Checkout.jsx          # Đặt hàng: giỏ hàng, đặt bàn, thanh toán, hoá đơn
             └── Checkout.css
-├── README.md
+└── README.md
 ```
 
 ---

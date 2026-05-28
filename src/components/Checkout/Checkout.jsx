@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useCart } from "../../context/CartContext";
-import { useProducts, useOrders } from "../../context/DataContext";
+import {
+  useProducts,
+  useOrders,
+  useLoginState,
+} from "../../context/DataContext";
 import { placeOrder, validatePromo } from "../../../system/api";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
@@ -84,6 +88,9 @@ export default function Checkout({ onNavigate }) {
   const { products } = useProducts();
   const { refetch: refetchOrders } = useOrders();
 
+  //check-loginStatus
+  const { loginState } = useLoginState();
+
   // Pre-order
   const [preorder, setPreorder] = useState(false);
   const [selectedTable, setTable] = useState(null);
@@ -140,6 +147,10 @@ export default function Checkout({ onNavigate }) {
   };
 
   const handleOrder = async () => {
+    if (!loginState) {
+      onNavigate("login");
+      return;
+    }
     if (cartItems.length === 0 || orderLoading) return;
     setOrderLoading(true);
     const { data, error } = await placeOrder({

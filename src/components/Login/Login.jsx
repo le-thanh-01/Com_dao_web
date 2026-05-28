@@ -6,7 +6,7 @@ import { PageLoader } from "../Skeleton/Skeleton";
 import "./Login.css";
 
 export default function Login({ onNavigate }) {
-  const [phone, setPhone] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -14,18 +14,26 @@ export default function Login({ onNavigate }) {
 
   const handleSubmit = async () => {
     setError("");
-    const Phone = phone.trim();
+    const Username = username.trim();
     const Password = password.trim();
-    if (!Phone) return setError("Vui lòng nhập số điện thoại.");
+
+    if (!Username) return setError("Vui lòng nhập số điện thoại / email.");
     if (!Password) return setError("Vui lòng nhập mật khẩu.");
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^(0|\+84)[3|5|7|8|9][0-9]{8}$/;
+
+    if (!emailRegex.test(Username) && !phoneRegex.test(Username))
+      return setError("số điện thoại / email không hợp lệ");
 
     // TODO: call auth API
     const { data, error } = await handleLogin({
-      phone: Phone,
+      username: Username,
       password: Password,
     });
     // console.log(error);
-    if (error) return setError("Số điện thoại hoặc mật khẩu không tồn tại.");
+    if (error)
+      return setError("Số điện thoại / email không tồn tại hoặc sai mật khẩu.");
     onNavigate?.("home");
   };
 
@@ -51,9 +59,9 @@ export default function Login({ onNavigate }) {
           <input
             className="login-card__input"
             type="tel"
-            placeholder="Số điện thoại:"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Email hoặc số điện thoại:"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           />
 
