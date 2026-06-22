@@ -1,6 +1,6 @@
 {
   "name": "com_dao_web",
-  "version": "1.0.1",
+  "version": "2.0.0",
   "homepage": "https://github.com/le-thanh-01/Com_dao_web",
   "private": true,
   "type": "module",
@@ -12,8 +12,11 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@stomp/stompjs": "^7.3.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "sockjs-client": "^1.6.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

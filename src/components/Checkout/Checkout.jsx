@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useCart } from "../../context/CartContext";
 import {
-  useProducts,
+  useAllProducts,
   useOrders,
-  useLoginState,
+  useAuth,
+  useUserQR,
+  useInvoice,
 } from "../../context/DataContext";
 import { placeOrder, validatePromo } from "../../../system/api";
 import Navbar from "../Navbar/Navbar";
@@ -22,22 +25,22 @@ const formatPrice = (num) => num.toLocaleString("vi-VN") + "đ";
 const PRODUCT_EMOJIS = {
   1: "🍲",
   2: "🍱",
-  3: "🥩",
+  3: "🥣",
   4: "🍜",
   5: "✨",
-  6: "✨",
+  6: "🥯",
   7: "🍮",
-  8: "🧋",
+  8: "🥘",
 };
 
-const TABLES = [
-  { id: 1, label: "Bàn 1", available: true },
-  { id: 2, label: "Bàn 2", available: true },
-  { id: 3, label: "Bàn 3", available: false },
-  { id: 4, label: "Bàn 4", available: true },
-  { id: 5, label: "Bàn 5", available: false },
-  { id: 6, label: "Bàn 6", available: true },
-];
+// const TABLES = [
+//   { id: 1, label: "Bàn 1", available: true },
+//   { id: 2, label: "Bàn 2", available: true },
+//   { id: 3, label: "Bàn 3", available: false },
+//   { id: 4, label: "Bàn 4", available: true },
+//   { id: 5, label: "Bàn 5", available: false },
+//   { id: 6, label: "Bàn 6", available: true },
+// ];
 
 /* ─── Toggle switch ─── */
 const Toggle = ({ checked, onChange }) => (
@@ -74,6 +77,143 @@ const Stepper = ({ qty, onInc, onDec }) => (
     </button>
   </div>
 );
+function QRScanner(orderId = 1) {
+  const { loading, fetchQR } = useUserQR();
+  const [QRLink, setQRLink] = useState(null);
+  useEffect(() => {
+    if (!orderId) return;
+
+    const targetId = typeof orderId === "object" ? orderId.id : orderId;
+    console.log("TẢGETID: ", targetId);
+    const loadQR = async () => {
+      const { data, error } = await fetchQR(targetId);
+      if (!error) {
+        setQRLink(data.qr_code);
+        console.log("Dữ liệu QRLink: ", { data, error });
+      } else {
+        console.error("Lỗi từ QRScanner: ", error);
+      }
+    };
+
+    loadQR();
+  }, [fetchQR]);
+
+  return (
+    <>
+      <div className="co-bank-qr__box">
+        {QRLink ? (
+          <QRCodeSVG
+            value={QRLink}
+            size={250} // Kích thước cạnh của ma trận (pixel)
+            bgColor={"#ffffff"} // Mã màu nền (Hex)
+            fgColor={"#000000"} // Mã màu của các module (điểm ảnh QR)
+            level={"M"} // Mức độ nội suy sửa lỗi (Error Correction)
+          />
+        ) : (
+          !loading && <div className="co-bank-qr__box">🔳</div>
+        )}
+      </div>
+
+      {loading && (
+        <div>
+          <Spinner size={14} color="#111" />
+          {/* <div className="co-bank-qr__box">🔳</div> */}
+        </div>
+      )}
+    </>
+  );
+}
+export function QRScannerModal({
+  onClose,
+  pushOrder = onClose,
+  orderLoading,
+  orderId = 1,
+}) {
+  const { invoiceRequest } = useInvoice();
+  // Trả về '/' hoặc '/ten-repo/'
+  const baseUrl = import.meta.env.BASE_URL;
+  const path = `${baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"}pages/help.html`;
+  return (
+    <div
+      className="acc-modal-overlay"
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div className="acc-modal">
+        <div className="acc-modal__head ">
+          <div className="title-center">
+            <div className="acc-modal__title">Thanh toán</div>
+            <div className="acc-modal__subtitle">
+              Vui lòng quét mã QR dưới đây để thanh toán
+            </div>
+          </div>
+          <button
+            className="acc-modal__close"
+            onClick={onClose}
+            aria-label="Đóng"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="acc-modal__body">
+          <div>
+            <div className="co-bank-qr">
+              <QRScanner id={orderId} />
+            </div>
+          </div>
+        </div>
+        <div className="QR-notices">
+          <ul>
+            <li>
+              <p>
+                Đơn hàng sẽ được xử lý sau khoảng 5 phút kể từ khi thanh toán
+                thành công.
+              </p>
+            </li>
+            <li>
+              <p>
+                Nếu trang web chưa cập nhật sau khi thanh toán, vui lòng reload
+                lại trang.
+              </p>
+            </li>
+            <li>
+              <p>
+                Trường hợp gặp sự cố khi thanh toán, vui lòng
+                <strong onClick={() => invoiceRequest(orderId)}>
+                  {" "}
+                  nhận hoá đơn thanh toán qua email{" "}
+                </strong>
+                hoặc{" "}
+                <a href={path} target="_blank" rel="noopener noreferrer">
+                  <strong> liên hệ CSKH</strong>
+                </a>
+                .
+              </p>
+            </li>
+          </ul>
+        </div>
+        <div className="acc-modal__footer">
+          {
+            <>
+              <button className="account-btn" onClick={onClose}>
+                Huỷ
+              </button>
+              <button
+                className="account-btn account-btn--primary"
+                onClick={() => pushOrder(false)}
+                disabled={orderLoading}
+                style={{ display: "flex", alignItems: "center", gap: 6 }}
+              >
+                {orderLoading && <Spinner size={14} color="#111" />}
+                {orderLoading ? "Đang xử lý..." : "Xác nhận"}
+              </button>
+            </>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ─── Main component ─── */
 export default function Checkout({ onNavigate }) {
@@ -85,28 +225,20 @@ export default function Checkout({ onNavigate }) {
     setQty,
     clearCart,
   } = useCart();
-  const { products } = useProducts();
+  const products = useAllProducts();
   const { refetch: refetchOrders } = useOrders();
 
   //check-loginStatus
-  const { loginState } = useLoginState();
+  const { loginState } = useAuth();
 
   // Pre-order
-  const [preorder, setPreorder] = useState(false);
-  const [selectedTable, setTable] = useState(null);
-  const [preorderDate, setPreorderDate] = useState("");
-  const [preorderTime, setPreorderTime] = useState("");
-  const [guestCount, setGuestCount] = useState("2");
   const [note, setNote] = useState("");
 
   // Payment
-  const [payment, setPayment] = useState("direct");
+  const [payment, setPayment] = useState("bank");
 
   // Invoice
   const [wantInvoice, setWantInvoice] = useState(false);
-  const [companyName, setCompanyName] = useState("");
-  const [taxCode, setTaxCode] = useState("");
-  const [companyAddr, setCompanyAddr] = useState("");
   const [invoiceEmail, setInvoiceEmail] = useState("");
 
   // Promo
@@ -120,13 +252,14 @@ export default function Checkout({ onNavigate }) {
   const [ordered, setOrdered] = useState(false);
   const [orderId, setOrderId] = useState("");
 
+  const [QROpen, setQROpen] = useState(false);
   /* ── computed ── */
   const cartItems = products
     .filter((p) => cart[p.id] > 0)
     .map((p) => ({
       ...p,
       qty: cart[p.id],
-      subtotal: parsePrice(p.price) * cart[p.id],
+      subtotal: p.price * cart[p.id],
     }));
 
   const subtotal = cartItems.reduce((s, i) => s + i.subtotal, 0);
@@ -145,6 +278,26 @@ export default function Checkout({ onNavigate }) {
     }
     setPromoApplied(true);
   };
+  const pushOrder = async (payment_success = false) => {
+    setOrderLoading(true);
+    const { data, error } = await placeOrder({
+      order_items: cartItems.map((i) => ({
+        product_id: i.id,
+        quantity: i.qty,
+      })),
+      discount: discount,
+      note: note,
+    });
+    console.log("CHECKOUTDATA: ", { data: data, error: error });
+    setOrderLoading(false);
+    //if (!error) {
+    if (true) {
+      // setOrderId(data.order.id);
+      clearCart();
+      // refetchOrders();
+      setOrdered(true);
+    }
+  };
 
   const handleOrder = async () => {
     if (!loginState) {
@@ -152,33 +305,8 @@ export default function Checkout({ onNavigate }) {
       return;
     }
     if (cartItems.length === 0 || orderLoading) return;
-    setOrderLoading(true);
-    const { data, error } = await placeOrder({
-      items: cartItems.map((i) => ({
-        name: i.name,
-        qty: i.qty,
-        price: i.price,
-        emoji: PRODUCT_EMOJIS[i.id] || "🍽️",
-      })),
-      total: formatPrice(total),
-      payment,
-      preorder: preorder
-        ? {
-            date: preorderDate,
-            time: preorderTime,
-            table: selectedTable,
-            guests: guestCount,
-            note,
-          }
-        : null,
-    });
-    setOrderLoading(false);
-    if (!error) {
-      setOrderId(data.order.id);
-      clearCart();
-      refetchOrders();
-      setOrdered(true);
-    }
+    // if (payment == "bank") setQROpen(true);
+    else pushOrder(true);
   };
 
   /* ── success screen ── */
@@ -225,7 +353,7 @@ export default function Checkout({ onNavigate }) {
               cursor: "pointer",
               fontFamily: "inherit",
             }}
-            onClick={() => onNavigate("account")}
+            onClick={() => onNavigate("account/orders")}
           >
             Xem đơn hàng của tôi →
           </button>
@@ -251,7 +379,7 @@ export default function Checkout({ onNavigate }) {
           {/* 1. Danh sách đơn hàng */}
           <div className="co-card">
             <div className="co-card__head">
-              <span className="co-card__head-num">1</span>
+              {/* <span className="co-card__head-num">1</span> */}
               <span className="co-card__head-title">Danh sách đơn hàng</span>
             </div>
             <div className="co-card__body">
@@ -302,10 +430,10 @@ export default function Checkout({ onNavigate }) {
                             </div>
                             <div>
                               <div className="co-product__name">
-                                {item.name}
+                                {item.label}
                                 {item.badge && (
                                   <span className="co-product__badge">
-                                    {item.badge === "hot" ? "HOT" : "MỚI"}
+                                    {item.badge === "HOT" ? "HOT" : "MỚI"}
                                   </span>
                                 )}
                               </div>
@@ -356,7 +484,7 @@ export default function Checkout({ onNavigate }) {
           </div>
 
           {/* 2. Đặt trước */}
-          <div className="co-card">
+          {/* <div className="co-card">
             <div className="co-card__head">
               <span className="co-card__head-num">2</span>
               <span className="co-card__head-title">Đặt bàn trước</span>
@@ -447,12 +575,12 @@ export default function Checkout({ onNavigate }) {
                 </div>
               )}
             </div>
-          </div>
+          </div> */}
 
           {/* 3. Phương thức thanh toán */}
           <div className="co-card">
             <div className="co-card__head">
-              <span className="co-card__head-num">3</span>
+              {/* <span className="co-card__head-num">3</span> */}
               <span className="co-card__head-title">
                 Phương thức thanh toán
               </span>
@@ -460,7 +588,7 @@ export default function Checkout({ onNavigate }) {
             <div className="co-card__body">
               <div className="co-payment-options">
                 {/* Direct */}
-                <div
+                {/* <div
                   className={`co-payment-opt ${payment === "direct" ? "co-payment-opt--selected" : ""}`}
                   onClick={() => setPayment("direct")}
                 >
@@ -476,7 +604,7 @@ export default function Checkout({ onNavigate }) {
                       Thanh toán bằng tiền mặt tại quầy khi nhận món
                     </div>
                   </div>
-                </div>
+                </div> */}
                 {/* Bank */}
                 <div
                   className={`co-payment-opt ${payment === "bank" ? "co-payment-opt--selected" : ""}`}
@@ -491,13 +619,13 @@ export default function Checkout({ onNavigate }) {
                       Chuyển khoản ngân hàng
                     </div>
                     <div className="co-payment-opt__desc">
-                      Chuyển khoản qua tài khoản hoặc quét mã QR
+                      {`Thực hiện thanh toán trong Tài khoản → Đơn hàng của tôi`}
                     </div>
                   </div>
                 </div>
               </div>
 
-              {payment === "bank" && (
+              {/* {payment === "bank" && (
                 <div className="co-bank-detail">
                   <div className="co-bank-detail__row">
                     <span className="co-bank-detail__label">Ngân hàng</span>
@@ -523,25 +651,13 @@ export default function Checkout({ onNavigate }) {
                       FOOD {Date.now().toString().slice(-6)}
                     </span>
                   </div>
-                  <div className="co-bank-qr">
-                    <div className="co-bank-qr__box">🔳</div>
-                    <div className="co-bank-qr__note">
-                      Quét mã QR bằng app ngân hàng để chuyển khoản nhanh.
-                      <br />
-                      Đơn hàng sẽ được xác nhận trong vòng{" "}
-                      <strong style={{ color: "var(--accent)" }}>
-                        5 phút
-                      </strong>{" "}
-                      sau khi nhận được thanh toán.
-                    </div>
-                  </div>
                 </div>
-              )}
+              )} */}
             </div>
           </div>
 
           {/* 4. Xuất hoá đơn */}
-          <div className="co-card">
+          {/* <div className="co-card">
             <div className="co-card__head">
               <span className="co-card__head-num">4</span>
               <span className="co-card__head-title">Xuất hoá đơn VAT</span>
@@ -608,6 +724,15 @@ export default function Checkout({ onNavigate }) {
                 </div>
               )}
             </div>
+          </div> */}
+          <div className="co-field co-field--full">
+            <label className="co-field__label">Ghi chú cho nhà hàng</label>
+            <input
+              className="co-field__input"
+              placeholder="VD: cần ghế cho trẻ em, ăn kiêng dị ứng..."
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+            />
           </div>
         </div>
 
@@ -623,7 +748,7 @@ export default function Checkout({ onNavigate }) {
                     className="co-summary-row__label"
                     style={{ fontSize: 12 }}
                   >
-                    {item.name} × {item.qty}
+                    {item.label} × {item.qty}
                   </span>
                   <span
                     className="co-summary-row__value"
@@ -717,11 +842,7 @@ export default function Checkout({ onNavigate }) {
                 }}
               >
                 {orderLoading && <Spinner size={16} color="#111" />}
-                {orderLoading
-                  ? "Đang xử lý..."
-                  : preorder
-                    ? "Xác nhận đặt bàn & đặt món"
-                    : "Đặt hàng ngay"}
+                {orderLoading ? "Đang xử lý..." : "Đặt hàng ngay"}
               </button>
 
               <p className="co-note">
@@ -734,6 +855,13 @@ export default function Checkout({ onNavigate }) {
             </div>
           </div>
         </div>
+        {QROpen && (
+          <QRScannerModal
+            onClose={() => setQROpen(false)}
+            pushOrder={pushOrder}
+            orderLoading={orderLoading}
+          />
+        )}
       </div>
 
       <Footer />

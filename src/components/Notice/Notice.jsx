@@ -5,22 +5,24 @@ import Footer from "../Footer/Footer";
 import { NoticeRowSkeleton, ErrorBlock } from "../Skeleton/Skeleton";
 import "./Notice.css";
 
-const TYPE_ICON = { promo: "🎁", system: "⚙️", order: "📦" };
+const TYPE_ICON = { PROMO: "🎁", SYSTEM: "⚙️", ORDER: "📦" };
 const TYPE_LABEL = {
-  promo: "Khuyến mãi",
-  system: "Hệ thống",
-  order: "Đơn hàng",
+  PROMO: "Khuyến mãi",
+  SYSTEM: "Hệ thống",
+  ORDER: "Đơn hàng",
 };
 
 const formatDate = (iso) => {
-  const [y, m, d] = iso.split("-");
+  const datePart = iso.split(" ")[1];
+  const [d, m, y] = datePart.split("-");
   return `${d}/${m}/${y}`;
 };
 
 const groupByMonth = (items) => {
   const groups = {};
   items.forEach((n) => {
-    const [y, m] = n.date.split("-");
+    const datePart = n.created.split(" ")[1];
+    const [d, m, y] = datePart.split("-");
     const key = `${m}/${y}`;
     if (!groups[key]) groups[key] = [];
     groups[key].push(n);
@@ -29,7 +31,7 @@ const groupByMonth = (items) => {
 };
 
 /* ─── Detail Modal ─── */
-function NoticeModal({ notice, onClose }) {
+function NoticeModal({ notice, onClose, onNavigate }) {
   useEffect(() => {
     const handler = (e) => {
       if (e.key === "Escape") onClose();
@@ -67,7 +69,7 @@ function NoticeModal({ notice, onClose }) {
                   <line x1="8" y1="2" x2="8" y2="6" />
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
-                {formatDate(notice.date)}
+                {formatDate(notice.created)}
               </span>
               <span
                 className={`notice-modal__type-badge notice-modal__type-badge--${notice.type}`}
@@ -87,13 +89,19 @@ function NoticeModal({ notice, onClose }) {
           <button className="notice-modal__btn" onClick={onClose}>
             Đóng
           </button>
-          {notice.type === "promo" && (
+          {/* {notice.type === "PROMO" && (
             <button className="notice-modal__btn notice-modal__btn--primary">
               Dùng ngay ↗
             </button>
-          )}
-          {notice.type === "order" && (
-            <button className="notice-modal__btn notice-modal__btn--primary">
+          )} */}
+          {notice.type === "ORDER" && (
+            <button
+              className="notice-modal__btn notice-modal__btn--primary"
+              onClick={(e) => {
+                e.preventDefault();
+                onNavigate?.("account/history");
+              }}
+            >
               Xem đơn hàng ↗
             </button>
           )}
@@ -105,33 +113,27 @@ function NoticeModal({ notice, onClose }) {
 
 /* ─── Full-page Notice ─── */
 export default function NoticePage({ onNavigate }) {
-  const { notices, loading, error, markRead, markAllRead, unreadCount } =
-    useNotices();
+  const { notices, loading, error } = useNotices();
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState(null);
-
+  // console.log("OURNOTICE:: ", notices);
   const filtered = notices.filter((n) => {
-    if (filter === "unread") return !n.read;
+    // if (filter === "unread") return !n.read;
     if (filter === "all") return true;
     return n.type === filter;
   });
 
   const grouped = groupByMonth(filtered);
 
-  const handleItemClick = async (notice) => {
-    await markRead(notice.id);
+  const handleItemClick = (notice) => {
     setSelected(notice);
   };
 
   const TABS = [
     { id: "all", label: "Tất cả" },
-    {
-      id: "unread",
-      label: `Chưa đọc${unreadCount > 0 ? ` (${unreadCount})` : ""}`,
-    },
-    { id: "promo", label: "Khuyến mãi" },
-    { id: "order", label: "Đơn hàng" },
-    { id: "system", label: "Hệ thống" },
+    { id: "PROMO", label: "Khuyến mãi" },
+    { id: "ORDER", label: "Đơn hàng" },
+    { id: "SYSTEM", label: "Hệ thống" },
   ];
 
   return (
@@ -151,7 +153,7 @@ export default function NoticePage({ onNavigate }) {
               Tất cả thông báo trong 3 tháng gần nhất
             </p>
           </div>
-          {!loading && unreadCount > 0 && (
+          {/* {!loading && unreadCount > 0 && (
             <button className="notice-page__mark-all" onClick={markAllRead}>
               <svg
                 width="13"
@@ -165,7 +167,7 @@ export default function NoticePage({ onNavigate }) {
               </svg>
               Đánh dấu tất cả đã đọc
             </button>
-          )}
+          )} */}
         </div>
 
         <div className="notice-layout">
@@ -206,9 +208,9 @@ export default function NoticePage({ onNavigate }) {
                       <line x1="12" y1="16" x2="12.01" y2="16" />
                     </svg>
                   )}
-                  {t.id === "promo" && <span>🎁</span>}
-                  {t.id === "order" && <span>📦</span>}
-                  {t.id === "system" && <span>⚙️</span>}
+                  {t.id === "PROMO" && <span>🎁</span>}
+                  {t.id === "ORDER" && <span>📦</span>}
+                  {t.id === "SYSTEM" && <span>⚙️</span>}
                 </span>
                 {t.label}
               </button>
@@ -251,7 +253,7 @@ export default function NoticePage({ onNavigate }) {
                     {items.map((notice) => (
                       <div
                         key={notice.id}
-                        className={`notice-row ${!notice.read ? "notice-row--unread" : ""}`}
+                        className={`notice-row`}
                         onClick={() => handleItemClick(notice)}
                       >
                         <div
@@ -267,7 +269,7 @@ export default function NoticePage({ onNavigate }) {
                               {TYPE_LABEL[notice.type]}
                             </span>
                             <span className="notice-row__date">
-                              {formatDate(notice.date)}
+                              {formatDate(notice.created)}
                             </span>
                           </div>
                           <div className="notice-row__title">
@@ -303,7 +305,11 @@ export default function NoticePage({ onNavigate }) {
 
       <Footer />
       {selected && (
-        <NoticeModal notice={selected} onClose={() => setSelected(null)} />
+        <NoticeModal
+          notice={selected}
+          onClose={() => setSelected(null)}
+          onNavigate={onNavigate}
+        />
       )}
     </div>
   );

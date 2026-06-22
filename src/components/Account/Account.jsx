@@ -3,8 +3,8 @@ import {
   useUserProfile,
   useOrders,
   useUserSettings,
+  useAuth,
 } from "../../context/DataContext";
-import { useLoginState } from "../../context/DataContext";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
 import {
@@ -16,13 +16,26 @@ import {
   ErrorBlock,
   PageLoader,
 } from "../Skeleton/Skeleton";
+import { QRScannerModal } from "../Checkout/Checkout";
 import "./Account.css";
 
 /* ─── helpers ─── */
 const STATUS_MAP = {
-  delivered: { label: "Đã giao", cls: "order-card__status--delivered" },
-  pending: { label: "Đang giao", cls: "order-card__status--pending" },
-  cancelled: { label: "Đã huỷ", cls: "order-card__status--cancelled" },
+  DELIVERED: { label: "Đã giao", cls: "order-card__status--delivered" },
+  DELIVERING: { label: "Đang giao", cls: "order-card__status--pending" },
+  CANCELLED: { label: "Đã huỷ", cls: "order-card__status--cancelled" },
+  PAYING: { label: "Chờ thanh toán", cls: "order-card__status--pending" },
+};
+
+const PRODUCT_EMOJIS = {
+  1: "🍲",
+  2: "🍱",
+  3: "🥣",
+  4: "🍜",
+  5: "✨",
+  6: "🥯",
+  7: "🍮",
+  8: "🥘",
 };
 
 const Toggle = ({ checked, onChange }) => (
@@ -33,9 +46,12 @@ const Toggle = ({ checked, onChange }) => (
 );
 
 /* ─── OrderCard ─── */
-/* ─── OrderCard ─── */
-const OrderCard = ({ order, onCancel, onConfirm }) => {
-  const st = STATUS_MAP[order.status];
+
+const OrderCard = ({ order, onCancel, onConfirm, type }) => {
+  const [QROpen, setQROpen] = useState(false);
+  const st = STATUS_MAP[order.state];
+
+  // console.log(order);
   // id của action đang loading trên card này: "cancel" | "confirm" | null
   const [actionLoading, setActionLoading] = useState(null);
   const [actionError, setActionError] = useState("");
@@ -56,7 +72,7 @@ const OrderCard = ({ order, onCancel, onConfirm }) => {
     if (error) setActionError(error);
   };
 
-  const isPending = order.status === "pending";
+  const isPending = order.state === "PENDING" || order.state === "PAYING";
 
   return (
     <div className="order-card">
@@ -71,17 +87,26 @@ const OrderCard = ({ order, onCancel, onConfirm }) => {
       <div className="order-card__body">
         {order.items.map((item, i) => (
           <div className="order-card__item" key={i}>
-            <div className="order-card__item-img">{item.emoji}</div>
-            <div className="order-card__item-name">{item.name}</div>
-            <div className="order-card__item-qty">x{item.qty}</div>
-            <div className="order-card__item-price">{item.price}</div>
+            <div className="order-card__item-img">
+              {PRODUCT_EMOJIS[item.product.id] || "🍽️"}
+            </div>
+            <div className="order-card__item-name">
+              {item.product.label}
+              {item.product.badge && (
+                <span className="co-product__badge">
+                  {item.product.badge === "HOT" ? "HOT" : "MỚI"}
+                </span>
+              )}
+            </div>
+            <div className="order-card__item-qty">x{item.quantity}</div>
+            <div className="order-card__item-price">{`${item.product.price} ${item.product.currency}`}</div>
           </div>
         ))}
       </div>
 
       <div className="order-card__footer">
         <span className="order-card__total-label">Tổng cộng</span>
-        <span className="order-card__total">{order.total}</span>
+        <span className="order-card__total">{`${order.total} ${order.currency}`}</span>
       </div>
 
       {/* Hành động — chỉ hiện khi đơn đang pending và có handler được truyền vào */}
@@ -119,8 +144,12 @@ const OrderCard = ({ order, onCancel, onConfirm }) => {
             {onConfirm && (
               <button
                 className="order-card__action-btn order-card__action-btn--confirm"
-                onClick={handleConfirm}
-                disabled={!!actionLoading}
+                onClick={
+                  order.state == "PAYING"
+                    ? () => setQROpen(true)
+                    : handleConfirm
+                }
+                disabled={!!actionLoading || order.state == "PENDING"}
               >
                 {actionLoading === "confirm" ? (
                   <Spinner size={13} color="#111" />
@@ -136,10 +165,21 @@ const OrderCard = ({ order, onCancel, onConfirm }) => {
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                 )}
-                Đã nhận được hàng
+                {type === "orders"
+                  ? order.state == "PAYING"
+                    ? "Thanh toán"
+                    : "Đã nhận được hàng"
+                  : "Nhận hoá đơn qua email"}
               </button>
             )}
           </div>
+          {QROpen && (
+            <QRScannerModal
+              onClose={() => setQROpen(false)}
+              orderLoading={false}
+              orderId={order.id}
+            />
+          )}
         </div>
       )}
     </div>
@@ -156,11 +196,21 @@ function PanelProfile({ onSave }) {
     if (user) setForm({ ...user });
   }, [user]);
 
-  const set = (k) => (e) => setForm((p) => ({ ...p, [k]: e.target.value }));
+  const set = (k) => (e) => {
+    setForm((p) => ({ ...p, [k]: e.target.value }));
+    if (k === "phone")
+      setForm((p) => ({ ...p, username: "user_" + e.target.value }));
+  };
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
 
+    const [year, month, day] = dateStr.split("-");
+    return `${day}-${month}-${year}`;
+  };
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await updateUserProfile(form);
+    const body = { ...form, date_of_birth: formatDate(form.date_of_birth) };
+    const { error } = await updateUserProfile(body);
     setSaving(false);
     if (!error) onSave();
   };
@@ -173,8 +223,7 @@ function PanelProfile({ onSave }) {
       <div className="account-card__section-title">Thông tin cá nhân</div>
       <div className="account-profile__grid">
         {[
-          { label: "Họ", key: "lastName", type: "text" },
-          { label: "Tên", key: "firstName", type: "text" },
+          { label: "Họ Tên", key: "full_name", type: "text" },
           { label: "Email", key: "email", type: "email" },
           {
             label: "Số điện thoại",
@@ -182,8 +231,7 @@ function PanelProfile({ onSave }) {
             type: "tel",
             hint: "Dùng để đăng nhập tài khoản",
           },
-          { label: "Ngày sinh", key: "dob", type: "date" },
-          { label: "Thành phố", key: "city", type: "text" },
+          { label: "Ngày sinh", key: "date_of_birth", type: "date" },
         ].map(({ label, key, type, hint }) => (
           <div className="account-field" key={key}>
             <label className="account-field__label">{label}</label>
@@ -223,6 +271,59 @@ function PanelProfile({ onSave }) {
   );
 }
 
+/** input field */
+// Ô input có nút ẩn/hiện
+const PwdField = ({ label, value, onChange, show, onToggle, placeholder }) => (
+  <div className="acc-modal__field">
+    <label className="acc-modal__label">{label}</label>
+    <div className="acc-modal__pwd-wrap">
+      <input
+        className="acc-modal__input"
+        type={show ? "text" : "password"}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      {value && (
+        <button
+          type="button"
+          className="acc-modal__eye"
+          onClick={onToggle}
+          tabIndex={-1}
+          aria-label={show ? "Ẩn" : "Hiện"}
+        >
+          {show ? (
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+              <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+              <line x1="1" y1="1" x2="23" y2="23" />
+            </svg>
+          ) : (
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+            >
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          )}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
 /* ─── ChangePasswordModal ─── */
 function ChangePasswordModal({ onClose }) {
   const [current, setCurrent] = useState("");
@@ -235,11 +336,7 @@ function ChangePasswordModal({ onClose }) {
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
   const [REQUIRED, setREQUIRED] = useState("");
-  const { user, loading, updateUserProfile } = useUserProfile();
-
-  useEffect(() => {
-    if (user) setREQUIRED(user.password);
-  }, [user]);
+  const { changePassword } = useUserSettings();
 
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onClose();
@@ -249,79 +346,33 @@ function ChangePasswordModal({ onClose }) {
 
   const handleSubmit = async () => {
     setError("");
-    if (!current || current !== REQUIRED)
-      return setError("Vui lòng nhập mật khẩu hiện tại.");
-    if (next.length < 6)
-      return setError("Mật khẩu mới phải có ít nhất 6 ký tự.");
+    if (!current) return setError("Vui lòng nhập mật khẩu hiện tại.");
+    if (current.length < 8)
+      return setError("Mật khẩu cũ phải có ít nhất 8 ký tự.");
+
+    if (next.length < 8)
+      return setError("Mật khẩu mới phải có ít nhất 8 ký tự.");
     if (next !== confirm) return setError("Mật khẩu xác nhận không khớp.");
     if (next === current)
       return setError("Mật khẩu mới phải khác mật khẩu cũ.");
 
     setSaving(true);
     // TODO: gọi API đổi mật khẩu thật
-    await updateUserProfile({ ["password"]: next });
+    const res = await changePassword({
+      old_password: current,
+      new_password: next,
+    });
+    // console.log("changePassword return: ", res);
     setSaving(false);
+    if (res.error === "Old password incorrect")
+      return setError("Mật khẩu cũ nhập sai. Vui lòng kiểm tra lại.");
+    else if (
+      res.error !==
+      "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+    )
+      return setError("Lỗi phản hồi: " + res.error);
     setDone(true);
   };
-
-  // Ô input có nút ẩn/hiện
-  const PwdField = ({
-    label,
-    value,
-    onChange,
-    show,
-    onToggle,
-    placeholder,
-  }) => (
-    <div className="acc-modal__field">
-      <label className="acc-modal__label">{label}</label>
-      <div className="acc-modal__pwd-wrap">
-        <input
-          className="acc-modal__input"
-          type={show ? "text" : "password"}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
-        {value && (
-          <button
-            type="button"
-            className="acc-modal__eye"
-            onClick={onToggle}
-            tabIndex={-1}
-            aria-label={show ? "Ẩn" : "Hiện"}
-          >
-            {show ? (
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                <line x1="1" y1="1" x2="23" y2="23" />
-              </svg>
-            ) : (
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.8"
-              >
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                <circle cx="12" cy="12" r="3" />
-              </svg>
-            )}
-          </button>
-        )}
-      </div>
-    </div>
-  );
 
   return (
     <div
@@ -408,7 +459,7 @@ function ChangePasswordModal({ onClose }) {
               />
 
               {/* Strength indicator */}
-              {next.length > 0 && (
+              {/* {next.length > 0 && (
                 <div className="acc-modal__strength">
                   <div className="acc-modal__strength-bar">
                     {[1, 2, 3, 4].map((lvl) => {
@@ -450,7 +501,7 @@ function ChangePasswordModal({ onClose }) {
                           : "Mạnh"}
                   </span>
                 </div>
-              )}
+              )} */}
             </>
           )}
         </div>
@@ -490,11 +541,8 @@ function DeleteAccountModal({ onClose, onConfirm }) {
   const [confirmText, setConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [REQUIRED, setREQUIRED] = useState("");
-  const { user, loading, updateUserProfile } = useUserProfile();
-
-  useEffect(() => {
-    if (user) setREQUIRED(user.password);
-  }, [user]);
+  const [error, setError] = useState("");
+  const { deleteUser } = useUserSettings();
 
   useEffect(() => {
     const esc = (e) => e.key === "Escape" && onClose();
@@ -503,16 +551,26 @@ function DeleteAccountModal({ onClose, onConfirm }) {
   }, [onClose]);
 
   const handleDelete = async () => {
-    if (confirmText !== REQUIRED) return;
+    if (!confirmText) return setError("Vui lòng nhập mật khẩu hiện tại.");
+    if (confirmText.length < 8)
+      return setError("Mật khẩu phải có ít nhất 8 ký tự.");
     setDeleting(true);
+
     // TODO: gọi API xoá tài khoản thật
-    await updateUserProfile({ ["delete"]: true });
+    const res = await deleteUser({ password: confirmText });
+    console.log("delusser return: ", res);
     setDeleting(false);
+    if (res.error === "Old password incorrect")
+      return setError("Sai mật khẩu. Vui lòng kiểm tra lại.");
+    else if (
+      res.error !==
+      "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+    )
+      return setError("Lỗi phản hồi: " + res.error);
     onConfirm();
   };
 
-  const ready = confirmText === REQUIRED;
-  if (loading) return <PageLoader></PageLoader>;
+  if (deleting) return <PageLoader></PageLoader>;
 
   return (
     <div
@@ -594,6 +652,7 @@ function DeleteAccountModal({ onClose, onConfirm }) {
               autoFocus
             />
           </div>
+          {error && <div className="acc-modal__error">{error}</div>}
         </div>
 
         <div className="acc-modal__footer">
@@ -603,12 +662,12 @@ function DeleteAccountModal({ onClose, onConfirm }) {
           <button
             className="account-btn account-btn--danger"
             onClick={handleDelete}
-            disabled={!ready || deleting}
+            disabled={deleting}
             style={{
               display: "flex",
               alignItems: "center",
               gap: 6,
-              opacity: ready ? 1 : 0.4,
+              // opacity: ready ? 1 : 0.4,
             }}
           >
             {deleting && <Spinner size={14} color="#fff" />}
@@ -620,9 +679,13 @@ function DeleteAccountModal({ onClose, onConfirm }) {
   );
 }
 
-function PanelSettings() {
-  const { userSettings, loading, error, updateUserSettings } =
-    useUserSettings();
+function PanelSettings(logout) {
+  const {
+    settings: userSettings,
+    loading,
+    error,
+    updateUserSettings,
+  } = useUserSettings();
 
   const [form, setForm] = useState(null);
   const [savingKey, setSavingKey] = useState(null);
@@ -633,9 +696,10 @@ function PanelSettings() {
   useEffect(() => {
     if (userSettings && !form) {
       setForm({ ...userSettings });
+      // console.log("USERSETTING: ", userSettings);
       document.documentElement.classList.toggle(
         "light",
-        !userSettings.darkMode,
+        !userSettings.use_dark_mode,
       );
     }
   }, [userSettings]);
@@ -643,22 +707,24 @@ function PanelSettings() {
   const handleToggle = async (key) => {
     const oldVal = form[key];
     const newVal = !oldVal;
-
     setForm((prev) => ({ ...prev, [key]: newVal }));
 
-    if (key === "darkMode") {
+    if (key === "use_dark_mode") {
       document.documentElement.classList.toggle("light", !newVal);
     }
 
     // 3. Envia ao servidor
     setSavingKey(key);
-    const { error: saveError } = await updateUserSettings({ [key]: newVal });
+    const { error: saveError } = await updateUserSettings({
+      ...form,
+      [key]: newVal,
+    });
     setSavingKey(null);
 
     if (saveError) {
       // 4a. Revert em caso de erro — desfaz atualização otimista
       setForm((prev) => ({ ...prev, [key]: oldVal }));
-      if (key === "darkMode") {
+      if (key === "use_dark_mode") {
         document.documentElement.classList.toggle("light", !oldVal);
       }
       setFeedback((prev) => ({ ...prev, [key]: "error" }));
@@ -669,30 +735,30 @@ function PanelSettings() {
     // Limpa feedback após 2s
     setTimeout(() => setFeedback((prev) => ({ ...prev, [key]: null })), 2000);
   };
-
+  // console.log("form: ", form);
   const ROWS = [
     {
-      key: "notif",
+      key: "should_notify",
       label: "Thông báo đơn hàng",
       desc: "Nhận thông báo khi đơn hàng thay đổi trạng thái",
     },
     {
-      key: "sms",
+      key: "use_sms",
       label: "Thông báo SMS",
       desc: "Nhận tin nhắn xác nhận qua số điện thoại",
     },
     {
-      key: "promo",
+      key: "include_promotion",
       label: "Khuyến mãi & ưu đãi",
       desc: "Nhận thông tin về chương trình khuyến mãi mới nhất",
     },
     {
-      key: "darkMode",
+      key: "use_dark_mode",
       label: "Giao diện tối",
       desc: "Sử dụng chủ đề tối cho giao diện",
     },
     {
-      key: "twoFA",
+      key: "use_two_step_verification",
       label: "Xác thực 2 bước (2FA)",
       desc: "Bảo mật tài khoản bằng mã OTP mỗi lần đăng nhập",
     },
@@ -805,7 +871,7 @@ function PanelSettings() {
           onClose={() => setDelOpen(false)}
           onConfirm={() => {
             setDelOpen(false);
-            window.location.reload();
+            logout();
           }}
         />
       )}
@@ -814,12 +880,22 @@ function PanelSettings() {
 }
 
 function PanelOrders() {
-  const { pendingOrders, loading, error, cancelOrder, confirmDelivery } =
-    useOrders();
+  const {
+    orders: pendingOrders,
+    loading,
+    error,
+    cancelOrder,
+    confirmDelivery,
+    fetchOrdersForStatus,
+  } = useOrders("pending");
+  useEffect(() => {
+    fetchOrdersForStatus("pending");
+  }, []);
 
   return (
     <div className="account-card">
       <div className="account-card__section-title">Đơn hàng hiện tại</div>
+
       {loading ? (
         <>
           <OrderCardSkeleton />
@@ -834,6 +910,7 @@ function PanelOrders() {
             order={o}
             onCancel={cancelOrder}
             onConfirm={confirmDelivery}
+            type={"orders"}
           />
         ))
       ) : (
@@ -862,11 +939,18 @@ function PanelOrders() {
 }
 
 function PanelHistory() {
-  const { historyOrders, loading, error } = useOrders();
-
-  const delivered = historyOrders.filter((o) => o.status === "delivered");
-  const cancelled = historyOrders.filter((o) => o.status === "cancelled");
-
+  const {
+    orders: historyOrders,
+    loading,
+    error,
+    fetchOrdersForStatus,
+  } = useOrders("history");
+  console.log("historyorder: ", historyOrders);
+  const delivered = historyOrders.filter((o) => o.state === "DELIVERED");
+  const cancelled = historyOrders.filter((o) => o.state === "CANCELLED");
+  useEffect(() => {
+    fetchOrdersForStatus("history");
+  }, []);
   return (
     <>
       <div className="account-stats">
@@ -925,7 +1009,14 @@ function PanelHistory() {
             </div>
           </div>
         ) : (
-          historyOrders.map((o) => <OrderCard key={o.id} order={o} />)
+          historyOrders.map((o) => (
+            <OrderCard
+              key={o.id}
+              order={o}
+              onConfirm={() => invoiceRequest(orderId)}
+              type={"history"}
+            />
+          ))
         )}
       </div>
     </>
@@ -1026,10 +1117,10 @@ const PANEL_TITLES = {
 };
 
 /* ─── Main ─── */
-export default function Account({ onNavigate }) {
-  const [panel, setPanel] = useState("profile");
+export default function Account({ onNavigate, initialPanel }) {
+  const [panel, setPanel] = useState(initialPanel ?? "profile");
   const [toast, setToast] = useState("");
-  const { loginState, handleLogout } = useLoginState();
+  const { loginState, logout: handleLogout } = useAuth();
   const { user, loading: userLoading } = useUserProfile();
 
   const showToast = (msg) => {
@@ -1037,12 +1128,12 @@ export default function Account({ onNavigate }) {
     setTimeout(() => setToast(""), 2800);
   };
   const logout = async () => {
-    const { data, error } = await handleLogout();
-    if (!error) window.location.reload();
+    handleLogout();
+    window.location.reload();
   };
 
   const { title, subtitle } = PANEL_TITLES[panel];
-  const displayName = user ? `${user.lastName} ${user.firstName}` : "—";
+  const displayName = user ? user.full_name : "—";
 
   return (
     <div className="account-page">
@@ -1152,7 +1243,7 @@ export default function Account({ onNavigate }) {
               onSave={() => showToast("✓ Thông tin đã được cập nhật!")}
             />
           )}
-          {panel === "settings" && <PanelSettings />}
+          {panel === "settings" && <PanelSettings logout={logout} />}
           {panel === "orders" && <PanelOrders />}
           {panel === "history" && <PanelHistory />}
         </div>

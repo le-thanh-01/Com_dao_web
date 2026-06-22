@@ -42,11 +42,11 @@ const getCountableBeds = (productsList) =>
  * @returns {{ isBlocked: boolean, isTopping: boolean, isDrink: boolean, qty: number }}
  */
 const evaluateProductQuota = (productId, targetCart, productsList) => {
+  const qty = targetCart[productId] || 0;
   const product = productsList.find((p) => p.id === productId);
   if (!product)
     return { isBlocked: false, isTopping: false, isDrink: false, qty: 0 };
 
-  const qty = targetCart[productId] || 0;
   const isTopping = product.cats?.includes("topping");
   const isDrink = product.cats?.includes("drink");
 
@@ -145,45 +145,98 @@ export function CartProvider({
   initialCart = {},
   onCartChange,
 }) {
+  //Giỏ hàng dùng để thay đổi giao diện (được component sử dụng)
   const [cart, setCart] = useState(initialCart);
+  //Giỏ hàng chuyên dụng cho updateQueue
+  const cartRef = useRef({});
+  //Hàng đợi gửi lần lượt các sản phẩm mới thay đổi trong giỏ hàng
+  const updateQueue = useRef([]);
+  //Biến trạng thái đảm bảo không gửi sản phẩm sau trong khi sản
+  //phẩm trước vẫn đang gửi
+  const isSyncing = useRef(false);
+
+  useEffect(() => {
+    console.log("CART_IN_CẢTCONTEXT", cart);
+  }, [cart]);
 
   /* ── Restore cart từ server khi initialCart về lần đầu ── */
   const initialised = useRef(false);
   useEffect(() => {
     if (!initialised.current && Object.keys(initialCart).length > 0) {
+      cartRef.current = initialCart;
       setCart(initialCart);
       initialised.current = true;
     }
   }, [initialCart]);
 
-  /* ── Debounce sync lên server 600ms sau mỗi thay đổi ── */
-  const syncTimer = useRef(null);
-  useEffect(() => {
-    if (!onCartChange) return;
-    clearTimeout(syncTimer.current);
-    syncTimer.current = setTimeout(() => onCartChange(cart), 600);
-    return () => clearTimeout(syncTimer.current);
-  }, [cart, onCartChange]);
+  /** bổ sung sản phẩm mới vào hàng đợi
+   * findIndex() cập nhật sản phẩm đã có trong hàng đợi
+   */
+  const enqueueUpdate = (productId, newQuantity) => {
+    const existingIndex = updateQueue.current.findIndex(
+      (item) => item.product_id === Number(productId),
+    );
+
+    if (existingIndex !== -1) {
+      // Ghi đè số lượng mới nhất vào tác vụ đang chờ
+      updateQueue.current[existingIndex].quantity = newQuantity;
+    } else {
+      // Tạo tác vụ mới nếu chưa tồn tại trong hàng đợi
+      updateQueue.current.push({
+        product_id: Number(productId),
+        quantity: newQuantity,
+      });
+    }
+    // Kích hoạt tiến trình gửi API ngầm
+    processQueue();
+  };
+
+  //Thực hiện gửi sản phẩm lên server
+  //đệ quy trong hàm để đảm bảo xử lý hết toàn bộ sản phẩm còn tồn đọng
+  //trong hàng đợi
+  const processQueue = async () => {
+    if (isSyncing.current || updateQueue.current.length === 0) return;
+    isSyncing.current = true;
+
+    const currentUpdate = updateQueue.current.shift();
+    // console.log("currentUpdateCart: ", onCartChange);
+
+    try {
+      await onCartChange(currentUpdate);
+    } catch (error) {
+      console.error("Lỗi đồng bộ hóa với Server:", error);
+    } finally {
+      isSyncing.current = false;
+      processQueue(); // Đệ quy xử lý tác vụ tiếp theo
+    }
+  };
 
   /* ── Raw mutators ── */
-  const increment = useCallback(
-    (id) => setCart((p) => ({ ...p, [id]: (p[id] || 0) + 1 })),
-    [],
-  );
+  const increment = useCallback((id) => {
+    cartRef.current[id] = (cartRef.current[id] || 0) + 1;
+    setCart((p) => ({ ...p, [id]: (p[id] || 0) + 1 }));
+    enqueueUpdate(id, cartRef.current[id]);
+  }, []);
 
-  const decrement = useCallback(
-    (id) =>
-      setCart((prev) => {
-        const next = (prev[id] || 0) - 1;
-        if (next <= 0) {
-          const c = { ...prev };
-          delete c[id];
-          return c;
-        }
-        return { ...prev, [id]: next };
-      }),
-    [],
-  );
+  const decrement = useCallback((id) => {
+    const currentQuantity = cartRef.current[id] || 0;
+    if (currentQuantity <= 0) return;
+
+    const newQuantity = currentQuantity - 1;
+
+    if (newQuantity === 0) {
+      const { [id]: _, ...rest } = cartRef.current;
+      cartRef.current = rest;
+    } else {
+      cartRef.current = {
+        ...cartRef.current,
+        [id]: newQuantity,
+      };
+    }
+    setCart(cartRef.current);
+
+    enqueueUpdate(id, newQuantity);
+  }, []);
 
   const setQty = useCallback(
     (id, qty) =>
@@ -249,15 +302,20 @@ export function CartProvider({
   const handleIncrement = useCallback(
     (productId, e) => {
       e?.stopPropagation();
-      setCart((prevCart) => {
-        const { isBlocked } = evaluateProductQuota(
-          productId,
-          prevCart,
-          products,
-        );
-        if (isBlocked) return prevCart; // huỷ update, không re-render
-        return { ...prevCart, [productId]: (prevCart[productId] || 0) + 1 };
-      });
+      const { isBlocked } = evaluateProductQuota(
+        productId,
+        cartRef.current,
+        products,
+      );
+      if (isBlocked) return;
+      //cập nhật cart ref
+      cartRef.current = {
+        ...cartRef.current,
+        [productId]: (cartRef.current[productId] || 0) + 1,
+      };
+      //cập nhật cart state
+      setCart(cartRef.current);
+      enqueueUpdate(productId, cartRef.current[productId]);
     },
     [products],
   );
@@ -284,23 +342,46 @@ export function CartProvider({
   const handleBedDecrement = useCallback(
     (productId, e) => {
       e?.stopPropagation();
-      setCart((prevCart) => {
-        const currentQty = prevCart[productId] || 0;
-        if (currentQty <= 0) return prevCart;
 
-        // 1. Giảm Bed
-        let next = { ...prevCart };
-        const newQty = currentQty - 1;
-        if (newQty <= 0) delete next[productId];
-        else next[productId] = newQty;
+      const currentCartState = cartRef.current;
+      const currentQty = currentCartState[productId] || 0;
 
-        // 2. Trim topping/drink nếu vượt quota mới
-        next = clearExtrasAfterBedDecrement(next, products);
+      if (currentQty <= 0) return;
 
-        return next;
+      let nextCartState = { ...currentCartState };
+      const newQty = currentQty - 1;
+
+      if (newQty <= 0) {
+        delete nextCartState[productId];
+      } else {
+        nextCartState[productId] = newQty;
+      }
+
+      nextCartState = clearExtrasAfterBedDecrement(nextCartState, products);
+
+      const changedItems = {};
+
+      changedItems[productId] = newQty;
+
+      Object.keys(currentCartState).forEach((key) => {
+        if (key !== String(productId)) {
+          const oldVal = currentCartState[key];
+          const newVal = nextCartState[key] || 0;
+
+          if (oldVal !== newVal) {
+            changedItems[key] = newVal;
+          }
+        }
+      });
+
+      cartRef.current = nextCartState;
+      setCart(nextCartState);
+
+      Object.entries(changedItems).forEach(([id, qty]) => {
+        enqueueUpdate(id, qty);
       });
     },
-    [products],
+    [products], // Lưu ý: Nếu có quy tắc linter nghiêm ngặt, cần thêm enqueueUpdate vào dependency array
   );
 
   const totalItems = useMemo(

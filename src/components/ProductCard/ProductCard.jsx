@@ -22,7 +22,7 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useCart } from "../../context/CartContext";
 import { ProductCardSkeleton } from "../Skeleton/Skeleton";
 import "./ProductCard.css";
@@ -57,6 +57,7 @@ const FallbackImg = ({ onShowError }) => {
     </svg>
   );
 };
+
 function ProductImage({ imageUrl, onLoad }) {
   // THAY ĐỔI: imgLoaded — theo dõi ảnh đã load thành công chưa
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -76,7 +77,7 @@ function ProductImage({ imageUrl, onLoad }) {
     // skeleton mãi vì một ảnh không tồn tại
     onLoad?.();
   };
-
+  // console.log("imgSrc =", imgSrc);
   return (
     <>
       {/* THAY ĐỔI: shimmer overlay hiển thị trong khi ảnh chưa load xong
@@ -121,7 +122,7 @@ const Badge = ({ type }) => {
   if (!type) return null;
   return (
     <span className={`product-card__badge product-card__badge--${type}`}>
-      {type === "hot" ? "HOT" : "MỚI"}
+      {type === "HOT" ? "HOT" : "MỚI"}
     </span>
   );
 };
@@ -348,10 +349,9 @@ export function ProductCard({ product, onImageLoad }) {
   const { getStatus, handleIncrement, handleDecrement, handleBedDecrement } =
     useCart();
   const { blocked, incBlocked, qty } = getStatus(product.id);
-  const ImageUrl = `${import.meta.env.BASE_URL}${product.url}`.replace(
-    "//",
-    "/",
-  );
+  const ImageUrl = product.image_url;
+  // console.log("IMAGEURRLLLL");
+  // console.log(ImageUrl);
 
   const isBed = product.cats?.includes("bed");
 
@@ -376,13 +376,13 @@ export function ProductCard({ product, onImageLoad }) {
       </div>
 
       <div className="product-card__info">
-        <div className="product-card__name">{product.name}</div>
+        <div className="product-card__name">{product.label}</div>
 
         <div className="product-card__bottom">
           <div
             className={`product-card__price ${product.free ? "product-card__price--free" : ""}`}
           >
-            {product.price}
+            {`${product.price} ${product.currency}`}
           </div>
 
           {qty === 0 ? (
@@ -472,7 +472,14 @@ export function ProductCard({ product, onImageLoad }) {
       Trước: tắt skeleton ngay khi prop `loading` = false (data đến)
       Sau:   tiếp tục giữ skeleton cho đến khi TẤT CẢ ảnh đã load/fail
    ═══════════════════════════════════════════ */
-export function ProductGrid({ products, activeCategory, loading }) {
+export function ProductGrid({
+  products,
+  activeCategory,
+  loading,
+  loadingMore = false,
+  hasMore = false,
+  onLoadMore, // callback khi sentinel visible
+}) {
   const showToppingBanner = activeCategory === "topping";
   const showDrinkBanner = activeCategory === "drink";
   // console.log(products.length);
@@ -518,6 +525,26 @@ export function ProductGrid({ products, activeCategory, loading }) {
       setMountSkeleton(true);
     }
   }, [showSkeleton]);
+
+  /* ── IntersectionObserver sentinel ──
+     Khi sentinel cuối grid vào viewport VÀ còn trang → gọi onLoadMore.
+     Chỉ observe khi không đang loading và hasMore = true.           */
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (!onLoadMore || !hasMore || showSkeleton || loadingMore) return;
+
+    const el = sentinelRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) onLoadMore();
+      },
+      { rootMargin: "120px" }, // bắt đầu fetch trước khi chạm đáy 120px
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, showSkeleton, loadingMore, onLoadMore]);
 
   if (!loading && products.length === 0) {
     return (
@@ -572,6 +599,20 @@ export function ProductGrid({ products, activeCategory, loading }) {
             <ProductCardSkeleton key={i} />
           ))}
         </div>
+      )}
+
+      {/* Skeleton "load more" — hiện ở dưới grid khi đang fetch trang tiếp */}
+      {loadingMore && (
+        <div className="product-grid" style={{ marginTop: 16 }}>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <ProductCardSkeleton key={i} />
+          ))}
+        </div>
+      )}
+
+      {/* Sentinel — điểm kích hoạt IntersectionObserver */}
+      {hasMore && !loadingMore && (
+        <div ref={sentinelRef} style={{ height: 1 }} aria-hidden="true" />
       )}
     </div>
   );

@@ -4,6 +4,7 @@ export default function Sidebar({
   categories,
   activeCategory,
   onCategoryChange,
+  onCategoryIdChange,
 }) {
   return (
     <aside className="sidebar">
@@ -13,7 +14,10 @@ export default function Sidebar({
         <div
           key={cat.id}
           className={`sidebar__item ${activeCategory === cat.id ? "sidebar__item--active" : ""}`}
-          onClick={() => onCategoryChange(cat.id)}
+          onClick={() => {
+            onCategoryChange(cat.label);
+            onCategoryIdChange(cat.id);
+          }}
         >
           <svg
             width="18"
@@ -27,7 +31,7 @@ export default function Sidebar({
             <line x1="3" y1="6" x2="21" y2="6" />
             <path d="M16 10a4 4 0 0 1-8 0" />
           </svg>
-          {cat.label}
+          {cat.description}
         </div>
       ))}
     </aside>

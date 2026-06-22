@@ -1,16 +1,16 @@
 import { useState } from "react";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
-import { useLoginState } from "../../context/DataContext";
+import { useAuth } from "../../context/DataContext";
 import { PageLoader } from "../Skeleton/Skeleton";
 import "./Login.css";
 
 export default function Login({ onNavigate }) {
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("0987654321");
+  const [password, setPassword] = useState("0987654321");
   const [error, setError] = useState("");
   const [showPwd, setShowPwd] = useState(false);
-  const { loading, handleLogin } = useLoginState();
+  const { loading, login: handleLogin } = useAuth();
 
   const handleSubmit = async () => {
     setError("");

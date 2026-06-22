@@ -11,6 +11,17 @@
  *   useNotices()     → { notices, loading, error, markRead, markAllRead }
  *   useOrders()      → { orders, pendingOrders, historyOrders, loading, error }
  *   useUserProfile() → { user, loading, error, updateProfile }
+ *
+ *  * 1. [MỚI] fetchLoginState() gọi server khi app reload để kiểm tra
+ *    token còn hạn — không chỉ đọc sessionStorage.
+ *
+ *    2. [MỚI] Products được fetch theo từng category đang hiển thị
+ *    (fetchProductsByCategory), tối đa PRODUCTS_PAGE_SIZE = 10 mỗi lần.
+ *    useProductsByCategory(category) refetch khi category thay đổi.
+ *
+ *    3. [MỚI] withTokenGuard bắt lỗi JWT_EXPIRED từ bất kỳ call nào
+ *    → hiển thị toast + doLogout() + trả về để App có thể navigate.
+ *
  * ──────────────────────────────────────────────────────────────
  */
 
@@ -21,12 +32,13 @@ import {
   useState,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
-  fetchProducts,
+  fetchProducts as fetchProductsByCategory,
   fetchCategories,
   fetchNotices,
-  fetchLoginState,
+  fetchLoginState as apiFetchLoginState,
   fetchSettings,
   fetchCart,
   fetchOrders,
@@ -39,16 +51,26 @@ import {
   cancelOrder,
   confirmDelivery,
   register,
-  login,
-  logout,
+  login as apiLogin,
+  setToken,
+  clearToken,
+  getToken,
+  JWT_EXPIRED,
+  initWebSocket,
+  disconnectWebSocket,
+  fetchQR,
+  updatePassword,
+  disableUser,
 } from "../../system/api";
 /* ── helpers ── */
 const initial = { data: null, loading: true, error: null };
 
-const useResource = (fetcher) => {
+const useResource = (fetcher, loginState = true) => {
   const [state, setState] = useState(initial);
 
   useEffect(() => {
+    if (!loginState) return;
+
     let alive = true;
     setState(initial);
     fetcher().then(({ data, error }) => {
@@ -58,14 +80,16 @@ const useResource = (fetcher) => {
     return () => {
       alive = false;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loginState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refetch = useCallback(() => {
+    if (!loginState) return;
+
     setState(initial);
     fetcher().then(({ data, error }) =>
       setState({ data, loading: false, error }),
     );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loginState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { ...state, refetch };
 };
@@ -76,142 +100,633 @@ const useResource = (fetcher) => {
 const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
+  /* ── Toast state — hiển thị khi JWT hết hạn ── */
+  const [toast, setToast] = useState(null); // { message, type }
+  const showToast = useCallback((message, type = "error") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  }, []);
+
+  /* ── login and logout ── */
+
+  /* ── Auth state ────────────────────────────────────────────────────────
+     Khôi phục token từ sessionStorage vào api.js module TRƯỚC khi render,
+     để các resource fetch (nếu loginState=true) có token ngay lập tức.
+  ───────────────────────────────────────────────────────────────────── */
+  const [loginState, setLoginState] = useState(() => {
+    const raw = sessionStorage.getItem("auth");
+    if (!raw) return false;
+    try {
+      const { token } = JSON.parse(raw);
+      if (!token) {
+        sessionStorage.removeItem("auth");
+        return false;
+      }
+      setToken({ token }); // khôi phục vào api.js
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
+  const doLogout = useCallback(() => {
+    clearToken();
+    sessionStorage.removeItem("auth");
+    setLoginState(false);
+  }, []);
+
+  useEffect(() => {
+    // if (!loginState) return; // chưa đăng nhập, không cần check
+
+    apiFetchLoginState().then(({ data, error }) => {
+      if (error?.error === JWT_EXPIRED || !data) {
+        // Token không còn hợp lệ phía server
+        showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        doLogout();
+        return;
+      }
+    });
+  }, []); // eslint-disable-line — chỉ chạy một lần khi mount
+
+  const login = useCallback(async (credentials) => {
+    const { data, error } = await apiLogin(credentials);
+    if (error) return { data, error };
+    // console.log("OURDATA: ", data.jwt);
+    const token = data.jwt;
+    // console.log("OUTTOKENNNN: ", token);
+    setToken({ token: token, expiresAt: "ex" });
+    sessionStorage.setItem(
+      "auth",
+      JSON.stringify({ token: token, expiresAt: "ex" }),
+    );
+    setLoginState(true);
+    return { data, error: null };
+  }, []);
+  const logout = useCallback(() => doLogout(), [doLogout]);
+
+  const isLoggedIn = !!loginState;
+  console.log("isLoggenIn: " + isLoggedIn);
+  /**
+   * withTokenGuard — bắt JWT_EXPIRED từ mọi protected call.
+   * Nếu nhận được JWT_EXPIRED:
+   *   1. Hiển thị toast cảnh báo
+   *   2. Tự động logout
+   *   3. Trả về lỗi để caller (nếu cần) có thể navigate
+   */
+  const withTokenGuard = useCallback(
+    async (fn) => {
+      const result = await fn();
+      if (result?.error === JWT_EXPIRED) {
+        showToast("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        doLogout();
+      }
+      return result;
+    },
+    [doLogout, showToast],
+  );
+  /* ── Products theo category với pagination ───────────────────────────
+     State mỗi category:
+       items:       Product[]  — danh sách tích luỹ qua các trang
+       page:        number     — trang hiện tại (0-based)
+       totalPages:  number     — tổng số trang server trả về
+       hasMore:     boolean    — còn trang tiếp theo không
+       loading:     boolean    — đang fetch trang đầu (category vừa đổi)
+       loadingMore: boolean    — đang fetch thêm (bấm "Xem thêm")
+       error:       string|null
+  ────────────────────────────────────────────────────────────────────── */
+  const CATEGORY_INITIAL = {
+    items: [],
+    loading: false,
+    error: null,
+  };
+  const [productState, setProductState] = useState({
+    byCategory: {}, // { [categoryId]: CATEGORY_INITIAL }
+    active: null,
+  });
+
+  /**
+   * allProducts — Map<id, Product> tích luỹ mọi sản phẩm đã fetch qua mọi category.
+   * Tách riêng khỏi byCategory để CartProvider có thể dùng mà không ảnh hưởng grid.
+   * Dùng useRef (không phải useState) vì CartProvider đọc trực tiếp qua useMemo —
+   * không cần trigger re-render riêng, quota tự recalc khi cart thay đổi.
+   */
+  const allProductsMap = useRef(new Map()); // Map<id, Product>
+
+  /** Trả về snapshot Array để truyền vào CartProvider */
+  const [allProductsArr, setAllProductsArr] = useState([]);
+
+  /** Merge sản phẩm mới vào allProductsMap và cập nhật allProductsArr */
+  const _mergeProducts = useCallback((newItems) => {
+    let changed = false;
+    newItems.forEach((p) => {
+      if (!allProductsMap.current.has(p.id)) {
+        allProductsMap.current.set(p.id, p);
+        changed = true;
+      }
+    });
+    if (changed) {
+      setAllProductsArr([...allProductsMap.current.values()]);
+    }
+  }, []);
+
+  /** Cập nhật state của một category cụ thể */
+  const _updateCat = useCallback(
+    (category, patch) =>
+      setProductState((prev) => ({
+        ...prev,
+        byCategory: {
+          ...prev.byCategory,
+          [category]: {
+            ...(prev.byCategory[category] ?? CATEGORY_INITIAL),
+            ...patch,
+          },
+        },
+      })),
+    [],
+  );
+
+  /**
+   * fetchProductsForCategory — fetch từ đầu (page 0) khi đổi category.
+   * Reset danh sách, giữ lại state cũ trong khi loading để tránh flicker.
+   */
+  const fetchProductsForCategory = useCallback(
+    async (category_id) => {
+      setProductState((prev) => ({
+        ...prev,
+        active: category_id,
+        byCategory: {
+          ...prev.byCategory,
+          [category_id]: {
+            ...(prev.byCategory[category_id] ?? CATEGORY_INITIAL),
+            loading: true,
+            error: null,
+          },
+        },
+      }));
+      const { data, error } = await fetchProductsByCategory({
+        category_id,
+      });
+
+      if (error) {
+        _updateCat(category_id, { loading: false, error });
+        return;
+      }
+
+      // Server trả { content, totalPages, totalElements, number }
+      const items = data?.products ?? (Array.isArray(data) ? data : []);
+
+      _updateCat(category_id, {
+        items,
+        loading: false,
+        error: null,
+      });
+      _mergeProducts(items);
+    },
+    [_updateCat, _mergeProducts],
+  );
+
+  /**
+   * loadMoreProducts — fetch trang tiếp theo và APPEND vào items hiện có.
+   * - Tự động dừng nếu không còn trang (hasMore = false)
+   * - Nếu server trả lỗi → set hasMore = false, không retry
+   */
+  // const loadMoreProducts = useCallback(
+  //   async (category_id) => {
+  //     const state = productState.byCategory[category_id] ?? CATEGORY_INITIAL;
+  //     if (!state.hasMore || state.loading || state.loadingMore) return;
+
+  //     const nextPage = state.page + 1;
+  //     _updateCat(category_id, { loadingMore: true });
+
+  //     const { data, error } = await fetchProductsByCategory({
+  //       category_id,
+  //     });
+
+  //     if (error) {
+  //       // Lỗi → dừng hẳn, không hiện gì thêm
+  //       _updateCat(category_id, { loadingMore: false, hasMore: false });
+  //       return;
+  //     }
+
+  //     const newItems = data?.products ?? (Array.isArray(data) ? data : []);
+  //     const totalPages = data?.total_pages ?? state.totalPages;
+  //     const hasMore = nextPage + 1 < totalPages;
+
+  //     _updateCat(category_id, {
+  //       items: [...state.items, ...newItems],
+  //       page: nextPage,
+  //       totalPages,
+  //       hasMore,
+  //       loadingMore: false,
+  //     });
+
+  //     _mergeProducts(newItems);
+  //   },
+  //   [productState, _updateCat, _mergeProducts],
+  // );
+
   /* ── catalog ── */
-  const products = useResource(fetchProducts);
   const categories = useResource(fetchCategories);
 
   /* ── user ── */
-  const userState = useResource(fetchProfile);
+  const userState = useResource(fetchProfile, isLoggedIn);
 
   const updateUserProfile = useCallback(
     async (fields) => {
-      const { data, error } = await updateProfile(fields);
-      if (!error) {
-        userState.refetch();
-      }
-      return { data, error };
+      return withTokenGuard(async () => {
+        const result = await updateProfile(fields);
+        if (!result.error) userState.refetch();
+        return result;
+      });
     },
-    [userState.refetch],
+    [withTokenGuard, userState.refetch],
   );
-
-  /* ── login and logout ── */
-  const userLoginState = useResource(fetchLoginState);
-
-  const handleLogin = useCallback(
-    async (userData) => {
-      const { data, error } = await login(userData);
-      if (!error) {
-        userLoginState.refetch();
-      }
-      return { data, error };
-    },
-    [userLoginState.refetch],
-  );
-  const handleLogout = useCallback(async () => {
-    const { data, error } = await logout();
-    if (!error) {
-      userLoginState.refetch();
-    }
-    return { data, error };
-  }, [userLoginState.refetch]);
 
   /* ── settings ── */
-  const userSettings = useResource(fetchSettings);
+  const userSettings = useResource(fetchSettings, isLoggedIn);
 
   const updateUserSettings = useCallback(
-    async (fields) => {
-      const { data, error } = await updateSettings(fields);
-      if (!error) {
-        userSettings.refetch();
-      }
-      return { data, error };
+    async (patch) => {
+      return withTokenGuard(async () => {
+        const result = await updateSettings(patch);
+        if (!result.error) userSettings.refetch();
+        return result;
+      });
     },
-    [userSettings.refetch],
+    [withTokenGuard, userSettings.refetch],
+  );
+  /** change password */
+  const changePassword = useCallback(
+    async (patch) => {
+      return withTokenGuard(async () => {
+        const result = await updatePassword(patch);
+        if (!result.error) userSettings.refetch();
+        return result;
+      });
+    },
+    [withTokenGuard, userSettings.refetch],
   );
 
+  const delUser = useCallback(async () => {
+    return withTokenGuard(async () => {
+      const result = await disableUser();
+      if (!result.error) userSettings.refetch();
+      return result;
+    });
+  }, [withTokenGuard, userSettings.refetch]);
+
   /* ── cart ── */
-  const userCart = useResource(fetchCart);
+  const userCart = useResource(fetchCart, isLoggedIn);
 
   const updateUserCart = useCallback(
     async (cartData) => {
-      // if (!loginState) return { data: null, error: null };
-      const { data, error } = await updateCart(cartData);
+      console.log("CART_DATACONTEXT", cartData);
+      return withTokenGuard(async () => {
+        const result = await updateCart(cartData);
+        if (!result.error) userCart.refetch();
+        return result;
+      });
+    },
+    [withTokenGuard, userCart.refetch],
+  );
+
+  /* ── Notices ── */
+  const [socketNotice, setSocketNotice] = useState([]);
+
+  useEffect(() => {
+    if (!loginState) return;
+    fetchNotices().then(({ data, error }) => {
       if (!error) {
-        userCart.refetch();
+        setSocketNotice(data.content);
       }
-      return { data, error };
-    },
-    [userCart.refetch],
-  );
-  /* ── notices ── */
-  const noticesState = useResource(fetchNotices);
+    });
+  }, [loginState]); // eslint-disable-line
 
-  const markRead = useCallback(
+  const formatAndPushNotice = (type, rawData) => {
+    let payload = rawData;
+    if (typeof rawData === "string") {
+      try {
+        payload = JSON.parse(rawData);
+      } catch (e) {
+        payload = rawData;
+      }
+    }
+
+    setSocketNotice((prev) => [...prev, payload]);
+  };
+  useEffect(() => {
+    console.log("NOTICEDATAÂ: ", socketNotice);
+  }, [socketNotice]);
+  useEffect(() => {
+    const token = getToken();
+    // Gọi hàm khởi tạo ở api.js. Hàm này tự động từ chối nếu _token là null
+    initWebSocket(token, formatAndPushNotice);
+
+    // Cleanup function: Đảm bảo ngắt kết nối khi component bị hủy
+    // hoặc trước khi useEffect chạy lại với token mới
+    return () => {
+      disconnectWebSocket();
+    };
+  }, [loginState]);
+
+  /* ─── Invoice request ─── */
+  const baseUrl = import.meta.env.BASE_URL;
+  const INVOICE_PAGE_PATH = `${baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"}pages/invoice.html`;
+
+  const popupRef = useRef(null);
+  const handlerRef = useRef(null);
+
+  const InvoiceRequest = useCallback((orderId) => {
+    console.log("ORDERID từ invoice: ", orderId);
+    // Dọn listener cũ nếu người dùng bấm nhiều lần
+    if (handlerRef.current) {
+      window.removeEventListener("message", handlerRef.current);
+    }
+
+    const popup = window.open(INVOICE_PAGE_PATH, "_blank");
+    popupRef.current = popup;
+
+    if (!popup) {
+      console.error("Không thể mở cửa sổ. Trình duyệt có thể đã chặn popup.");
+      return;
+    }
+
+    function handleMessage(event) {
+      // Chỉ chấp nhận message từ cùng origin (vì invoice.html cùng domain)
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data) return;
+
+      if (data.type === "INVOICE_READY") {
+        // Trang con đã sẵn sàng -> gửi dữ liệu bảo mật
+        popup.postMessage(
+          {
+            type: "INVOICE_AUTH",
+            token: getToken(),
+            id: orderId,
+          },
+          window.location.origin,
+        );
+      }
+
+      if (data.type === "INVOICE_RESULT") {
+        if (data.success) {
+          console.log("Lấy hoá đơn thành công:", data.payload);
+        } else {
+          console.error("Lấy hoá đơn thất bại:", data.payload);
+        }
+        window.removeEventListener("message", handleMessage);
+        handlerRef.current = null;
+      }
+    }
+
+    handlerRef.current = handleMessage;
+    window.addEventListener("message", handleMessage);
+  }, []); // eslint-disable-line
+
+  /* ── QR ── */
+  const [QRloading, setQRLoading] = useState(false);
+  const fetchQRForId = useCallback(
     async (id) => {
-      await markNoticeRead(id);
-      noticesState.refetch();
+      if (!loginState) return;
+      setQRLoading(true);
+      return withTokenGuard(async () => {
+        const { data, error } = await fetchQR(id);
+        if (error) console.error("Lỗi từ QRFetch: ", error);
+        setQRLoading(false);
+        return { data, error };
+      });
     },
-    [noticesState.refetch],
+    [withTokenGuard],
   );
 
-  const markAllRead = useCallback(async () => {
-    await markAllNoticesRead();
-    noticesState.refetch();
-  }, [noticesState.refetch]);
+  /* ── Orders ── */
+  const ORDER_INITIAL = {
+    items: [],
+    page: 0,
+    totalPages: 1,
+    hasMore: false,
+    loading: false,
+    loadingMore: false,
+    error: null,
+  };
 
-  /* ── orders ── */
-  const ordersState = useResource(fetchOrders);
+  const [orderState, setOrderState] = useState({
+    byStatus: {
+      pending: ORDER_INITIAL,
+      history: ORDER_INITIAL,
+    },
+    active: null,
+  });
+  useEffect(() => {
+    console.log("orderState: ", orderState);
+  }, [orderState]); // eslint-disable-line
+
+  // Tải trang đầu tiên (Reset danh sách)
+  const fetchOrdersForStatus = useCallback(async (status) => {
+    setOrderState((prev) => ({
+      ...prev,
+      active: status,
+      byStatus: {
+        ...prev.byStatus,
+        [status]: {
+          ...(prev.byStatus[status] ?? ORDER_INITIAL),
+          loading: true,
+          error: null,
+        },
+      },
+    }));
+
+    const { data, error } = await fetchOrders(status, 0);
+
+    if (error) {
+      setOrderState((prev) => ({
+        ...prev,
+        byStatus: {
+          ...prev.byStatus,
+          [status]: {
+            ...prev.byStatus[status],
+            loading: false,
+            error,
+          },
+        },
+      }));
+      return;
+    }
+
+    setOrderState((prev) => ({
+      ...prev,
+      byStatus: {
+        ...prev.byStatus,
+        [status]: {
+          items: data.content ?? [],
+          loading: false,
+          error: null,
+        },
+      },
+    }));
+  }, []);
+
+  // Tải trang tiếp theo (Append vào danh sách)
+  const loadMoreOrders = useCallback(async () => {
+    if (!orderState.hasMore || orderState.loading || orderState.loadingMore)
+      return;
+
+    const nextPage = orderState.page + 1;
+    setOrderState((prev) => ({ ...prev, loadingMore: true }));
+
+    const { data, error } = await fetchOrders({ page: nextPage });
+
+    if (error) {
+      setOrderState((prev) => ({
+        ...prev,
+        loadingMore: false,
+        hasMore: false,
+      }));
+      return;
+    }
+
+    const newItems = data?.content ?? (Array.isArray(data) ? data : []);
+    const totalPages = data?.total_pages ?? orderState.totalPages;
+    const hasMore = nextPage + 1 < totalPages;
+
+    setOrderState((prev) => ({
+      ...prev,
+      items: [...prev.items, ...newItems],
+      page: nextPage,
+      totalPages,
+      hasMore,
+      loadingMore: false,
+    }));
+  }, [orderState]);
 
   const cancelOrderAction = useCallback(
     async (id) => {
-      const result = await cancelOrder(id);
-      if (!result.error) ordersState.refetch();
-      return result;
+      return withTokenGuard(async () => {
+        const result = await cancelOrder(id);
+        if (!result.error) {
+          await fetchOrdersForStatus("pending");
+          await fetchOrdersForStatus("history");
+        }
+        return result;
+      });
     },
-    [ordersState.refetch],
+    [withTokenGuard, fetchOrdersForStatus],
   );
 
   const confirmDeliveryAction = useCallback(
     async (id) => {
-      const result = await confirmDelivery(id);
-      if (!result.error) ordersState.refetch();
-      return result;
+      return withTokenGuard(async () => {
+        const result = await confirmDelivery(id);
+        if (!result.error) {
+          await fetchOrdersForStatus("pending");
+          await fetchOrdersForStatus("history");
+        }
+        return result;
+      });
     },
-    [ordersState.refetch],
+    [withTokenGuard, fetchOrdersForStatus],
   );
 
-  return (
-    <DataContext.Provider
-      value={{
-        products,
-        categories,
-        user: { ...userState, updateUserProfile },
-        notices: { ...noticesState, markRead, markAllRead },
-        loginState: { ...userLoginState, handleLogin, handleLogout },
-        settings: { ...userSettings, updateUserSettings },
-        cart: { ...userCart, updateUserCart },
-        orders: {
-          ...ordersState,
-          cancelOrder: cancelOrderAction,
-          confirmDelivery: confirmDeliveryAction,
-        },
-      }}
-    >
-      {children}
-    </DataContext.Provider>
+  /* ── Context value ── */
+  const value = useMemo(
+    () => ({
+      auth: {
+        loginState,
+        login,
+        logout,
+      },
+      toast,
+      products: {
+        byCategory: productState.byCategory,
+        activeCategory: productState.active,
+        allProducts: allProductsArr,
+        fetchProductsForCategory,
+      },
+
+      categories,
+
+      user: { ...userState, updateUserProfile },
+      settings: {
+        ...userSettings,
+        updateUserSettings,
+        delUser,
+        changePassword,
+      },
+      notices: {
+        data: socketNotice,
+        loading: false,
+        error: null,
+      },
+      invoice: { InvoiceRequest },
+      QR: { QRloading, fetchQRForId },
+      orders: {
+        byStatus: orderState.byStatus,
+        activeStatus: orderState.active,
+        fetchOrdersForStatus,
+        cancelOrder: cancelOrderAction,
+        confirmDelivery: confirmDeliveryAction,
+      },
+      cart: { ...userCart, updateUserCart: updateUserCart },
+    }),
+    [
+      loginState,
+      login,
+      logout,
+      toast,
+      productState,
+      fetchProductsForCategory,
+      categories,
+      userState,
+      updateUserProfile,
+      userSettings,
+      updateUserSettings,
+      delUser,
+      changePassword,
+      socketNotice,
+      InvoiceRequest,
+      QRloading,
+      fetchQRForId,
+      orderState,
+      cancelOrder,
+      confirmDelivery,
+      userCart,
+      updateUserCart,
+      fetchOrdersForStatus,
+      loadMoreOrders,
+    ],
   );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }
 
 /* ════════════════════════════════════════════
    PUBLIC HOOKS
 ════════════════════════════════════════════ */
 
-export const useProducts = () => {
+export const useAuth = () => useContext(DataContext).auth;
+
+export const useToast = () => useContext(DataContext).toast;
+
+export const useAllProducts = () => {
   const { products } = useContext(DataContext);
+  return products.allProducts;
+};
+
+export const useProductsByCategory = (category) => {
+  const { products } = useContext(DataContext);
+  // console.log("đang kiểm tra products");
+  // console.log(products);
+  const state = products.byCategory[category] ?? {
+    items: [],
+    loading: false,
+    error: null,
+  };
   return {
-    products: products.data ?? [],
-    loading: products.loading,
-    error: products.error,
+    products: state.items,
+    loading: state.loading,
+    error: state.error,
+    fetchProductsForCategory: products.fetchProductsForCategory,
   };
 };
 
@@ -233,30 +748,25 @@ export const useUserProfile = () => {
     updateUserProfile: user.updateUserProfile,
   };
 };
-
-export const useLoginState = () => {
-  const { loginState } = useContext(DataContext);
-  return {
-    loginState: loginState.data,
-    loading: loginState.loading,
-    error: loginState.error,
-    handleLogin: loginState.handleLogin,
-    handleLogout: loginState.handleLogout,
-  };
-};
-
 export const useUserSettings = () => {
   const { settings } = useContext(DataContext);
-
   return {
-    userSettings: settings.data,
+    settings: settings.data,
     loading: settings.loading,
     error: settings.error,
-
     updateUserSettings: settings.updateUserSettings,
+    deleteUser: settings.delUser,
+    changePassword: settings.changePassword,
   };
 };
-
+export const useNotices = () => {
+  const { notices } = useContext(DataContext);
+  return {
+    notices: notices.data ?? [],
+    loading: notices.loading,
+    error: notices.error,
+  };
+};
 export const useUserCart = () => {
   const { cart } = useContext(DataContext);
   return {
@@ -267,34 +777,37 @@ export const useUserCart = () => {
   };
 };
 
-export const useNotices = () => {
-  const { notices } = useContext(DataContext);
-  const unreadCount = useMemo(() => {
-    if (!notices || !notices.data) return 0;
-    return notices.data.filter((n) => !n.read).length;
-  }, [notices]);
+export const useInvoice = () => {
+  const { invoice } = useContext(DataContext);
   return {
-    notices: notices.data ?? [],
-    loading: notices.loading,
-    error: notices.error,
-    markRead: notices.markRead,
-    markAllRead: notices.markAllRead,
-    unreadCount,
+    invoiceRequest: invoice.InvoiceRequest,
   };
 };
 
-export const useOrders = () => {
-  const { orders } = useContext(DataContext);
-  const all = orders.data ?? [];
+export const useUserQR = () => {
+  const { QR } = useContext(DataContext);
   return {
-    orders: all,
-    pendingOrders: all.filter((o) => o.status === "pending"),
-    historyOrders: all.filter((o) => o.status !== "pending"),
-    loading: orders.loading,
-    error: orders.error,
-    refetch: orders.refetch,
+    loading: QR.QRloading,
+    fetchQR: QR.fetchQRForId,
+  };
+};
+
+export const useOrders = (status = null) => {
+  const { orders } = useContext(DataContext);
+
+  const state = orders.byStatus[status] ?? {
+    items: [],
+    loading: false,
+    error: null,
+  };
+
+  return {
+    orders: state.items,
+    loading: state.loading,
+    error: state.error,
     cancelOrder: orders.cancelOrder,
     confirmDelivery: orders.confirmDelivery,
+    fetchOrdersForStatus: orders.fetchOrdersForStatus,
   };
 };
 

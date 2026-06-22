@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chính sách bảo mật - Cơm Đảo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Inter", "sans-serif"] },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+    <!-- Navigation Bar -->
+    <nav
+      class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <a
+            href="https://le-thanh-01.github.io/Com_dao_web/"
+            class="flex items-center space-x-2"
+          >
+            <span class="text-xl font-bold tracking-tight text-orange-600">
+              <span class="bg-orange-600 text-white px-2 py-0.5 rounded mr-1"
+                >CĐ</span
+              >4S - Cơm đảo Bách Khoa
+            </span>
+          </a>
+          <a
+            href="https://le-thanh-01.github.io/Com_dao_web/"
+            class="text-sm font-medium text-gray-600 hover:text-orange-600 transition-colors"
+          >
+            &larr; Quay lại Trang chủ
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="flex-grow max-w-3xl mx-auto px-4 py-12 sm:px-6 lg:py-16">
+      <article
+        class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12"
+      >
+        <header class="mb-8 border-b border-gray-100 pb-6">
+          <h1 class="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">
+            Chính sách bảo mật
+          </h1>
+          <p class="text-sm text-gray-500">
+            Cập nhật lần cuối: Tháng 06 năm 2026
+          </p>
+        </header>
+
+        <div class="space-y-6 text-gray-600 leading-relaxed">
+          <p>
+            Chào mừng bạn đến với <strong>4S - Cơm đảo Bách Khoa</strong>. Chúng
+            tôi hiểu rằng quyền riêng tư của bạn là vô cùng quan trọng. Chính
+            sách bảo mật này giải thích cách chúng tôi xử lý thông tin khi bạn
+            trải nghiệm website của chúng chúng tôi.
+          </p>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">
+              1. Bản chất Dự án Phi Thương Mại
+            </h2>
+            <p>
+              Website 4S - Cơm đảo Bách Khoa là một sản phẩm học tập và mô phỏng
+              giao diện trải nghiệm người dùng (UI/UX). Chúng tôi
+              <strong
+                >không kinh doanh, không bán hàng thật và không tích hợp bất kỳ
+                cổng thanh toán nào</strong
+              >
+              yêu cầu thông tin tài chính cá nhân của người dùng.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">
+              2. Thông tin chúng tôi thu thập
+            </h2>
+            <p>
+              Vì đây là một website tĩnh chạy hoàn toàn trên trình duyệt của bạn
+              (Client-side), chúng tôi cam kết:
+            </p>
+            <ul class="list-disc pl-5 mt-2 space-y-1">
+              <li>
+                <strong>Không thu thập dữ liệu cá nhân:</strong> Chúng tôi không
+                thu thập họ tên, số điện thoại, địa chỉ hay thông tin thẻ ngân
+                hàng của bạn.
+              </li>
+              <li>
+                <strong>Form Bản tin / Đặt hàng thử nghiệm:</strong> Mọi dữ liệu
+                bạn nhập vào các ô nhập liệu (Input) như Email, Địa chỉ giao
+                hàng chỉ phục vụ mục đích mô phỏng hành vi giao diện trên trình
+                duyệt và <strong>không được gửi hay lưu trữ</strong> về bất kỳ
+                máy chủ (Server) nào.
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">
+              3. Công nghệ Cookies và Local Storage
+            </h2>
+            <p>
+              Website có thể sử dụng bộ nhớ cục bộ của trình duyệt (Local
+              Storage) để lưu trữ tạm thời các món ăn bạn đã thêm vào giỏ hàng
+              nhằm tối ưu hóa tính năng hiển thị demo. Dữ liệu này nằm hoàn toàn
+              trên thiết bị của bạn và bạn có thể xóa sạch bất cứ lúc nào bằng
+              cách xóa lịch sử trình duyệt.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">
+              4. An toàn thông tin
+            </h2>
+            <p>
+              Do không có cơ sở dữ liệu (Database) lưu trữ thông tin người dùng,
+              website hoàn toàn không có rủi ro rò rỉ dữ liệu cá nhân. Tuy
+              nhiên, chúng tôi khuyến cáo bạn không nên nhập các thông tin cá
+              nhân/mật khẩu có thật vào các form trải nghiệm trên mạng để tạo
+              thói quen bảo mật an toàn.
+            </p>
+          </div>
+
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 mb-3">
+              5. Thay đổi chính sách
+            </h2>
+            <p>
+              Chúng tôi có quyền cập nhật chính sách bảo mật này bất cứ lúc nào
+              để phù hợp với tiến độ phát triển của dự án demo. Mọi thay đổi sẽ
+              được đăng tải trực tiếp trên trang này.
+            </p>
+          </div>
+        </div>
+      </article>
+    </main>
+
+    <!-- Footer -->
+    <footer
+      class="bg-gray-900 text-gray-400 py-8 border-t border-gray-800 text-center text-sm"
+    >
+      <div class="max-w-7xl mx-auto px-4">
+        <p>&copy; 4S - Cơm đảo Bách Khoa.</p>
+      </div>
+    </footer>
+  </body>
+</html>

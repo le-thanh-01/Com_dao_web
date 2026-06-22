@@ -49,7 +49,7 @@ const Field = ({
       placeholder={placeholder}
       value={value}
       onChange={(e) => onChange(name, e.target.value)}
-      autoComplete="off"
+      autoComplete="on"
     />
     {error && <span className="register-form__error-msg">{error}</span>}
   </div>

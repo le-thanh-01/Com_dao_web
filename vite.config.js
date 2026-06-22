@@ -14,4 +14,8 @@ export default defineConfig({
       },
     },
   },
+  define: {
+    // Ánh xạ 'global' thành 'window' cho môi trường trình duyệt
+    global: "window",
+  },
 });

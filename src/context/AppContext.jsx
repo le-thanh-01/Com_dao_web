@@ -1,18 +1,19 @@
 import { CartProvider } from "./CartContext";
 import {
   DataProvider,
-  useProducts,
+  useAuth,
+  useProductsByCategory,
   useUserCart,
-  useLoginState,
+  useAllProducts,
 } from "./DataContext";
 
 function CartBridge({ children }) {
-  const { products } = useProducts();
+  const allProducts = useAllProducts();
+  const { loginState } = useAuth();
   const { userCart, updateUserCart } = useUserCart();
-  const { loginState } = useLoginState();
   return (
     <CartProvider
-      products={products}
+      products={allProducts}
       initialCart={loginState ? userCart : {}}
       onCartChange={loginState ? updateUserCart : undefined}
     >

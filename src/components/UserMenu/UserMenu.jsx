@@ -1,12 +1,12 @@
 import { useState, useRef } from "react";
-import { useLoginState } from "../../context/DataContext";
+import { useAuth } from "../../context/DataContext";
 import { PageLoader } from "../Skeleton/Skeleton";
 import "./UserMenu.css";
 
 function UserMenuItems({ logined = false, onNavigate, handleLogout }) {
   const logout = async () => {
-    const { data, error } = await handleLogout();
-    if (!error) window.location.reload();
+    handleLogout();
+    window.location.reload();
   };
 
   if (logined)
@@ -41,7 +41,7 @@ function UserMenuItems({ logined = false, onNavigate, handleLogout }) {
 }
 export default function UserMenu({ onNavigate }) {
   const [open, setOpen] = useState(false);
-  const { loginState, loading, handleLogout } = useLoginState();
+  const { loginState, loading, logout } = useAuth();
   const timerRef = useRef(null);
   // console.log(loginState);
   // console.log(handleLogout);
@@ -84,7 +84,7 @@ export default function UserMenu({ onNavigate }) {
         <UserMenuItems
           logined={loginState}
           onNavigate={onNavigate}
-          handleLogout={handleLogout}
+          handleLogout={logout}
         ></UserMenuItems>
       </div>
     </div>

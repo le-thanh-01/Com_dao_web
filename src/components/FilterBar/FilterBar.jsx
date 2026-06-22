@@ -2,8 +2,8 @@ import "./FilterBar.css";
 import { useState } from "react";
 
 const FILTERS = [
-  { id: "all", label: "Tất cả" },
-  { id: "new", label: "Mới" },
+  { id: "ALL", label: "Tất cả" },
+  { id: "NEW", label: "Mới" },
 ];
 
 export default function FilterBar({
@@ -29,8 +29,8 @@ export default function FilterBar({
       <div className="filter-bar__divider" />
 
       <button
-        className={`filter-bar__promo ${activeFilter === "promo" ? "filter-bar__promo--active" : ""}`}
-        onClick={() => onFilterChange("promo")}
+        className={`filter-bar__promo ${activeFilter === "HOT" ? "filter-bar__promo--active" : ""}`}
+        onClick={() => onFilterChange("HOT")}
       >
         <span className="filter-bar__promo-dot" />
         Chương trình khuyến mãi
