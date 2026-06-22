@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Xác nhận hoá đơn</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Playfair+Display:wght@600&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root.light {
+        /* Nhóm Background & Surface */
+        --bg: #fbfaf7;
+        --surface: #ffffff;
+        --surface2: #f2f0eb;
+        --surface3: #e5e3de;
+        --border: #d4d2cc;
+
+        /* Nhóm Typography */
+        --text: #1a1a18;
+        --text-muted: #6e6c67;
+        --text-dim: #a3a19c;
+
+        /* Nhóm Accent (Màu nhấn) */
+        --accent: #ad8f51;
+        --accent-soft: rgba(173, 143, 81, 0.1);
+        --accent-hover: #947841;
+        --red: #d64f3c;
+        --red-soft: rgba(214, 79, 60, 0.1);
+
+        --radius-sm: 4px;
+        --radius-md: 8px;
+        --radius-lg: 10px;
+        --radius-xl: 12px;
+        --radius-full: 9999px;
+
+        --font-base: "Be Vietnam Pro", "Segoe UI", sans-serif;
+        --font-display: "Playfair Display", serif;
+
+        --transition-fast: 0.15s ease;
+        --transition-med: 0.2s ease;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+
+      body {
+        background: var(--bg);
+        font-family: var(--font-base);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 24px;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 400px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        padding: 40px 32px 32px;
+        box-shadow: 0 4px 24px rgba(26, 26, 24, 0.06);
+        text-align: center;
+      }
+
+      .icon-wrap {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 22px;
+        border-radius: var(--radius-full);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--accent-soft);
+        transition: background var(--transition-med);
+      }
+
+      .icon-wrap.is-error {
+        background: var(--red-soft);
+      }
+
+      .spinner {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 3px solid var(--surface3);
+        border-top-color: var(--accent);
+        animation: spin 0.8s linear infinite;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .icon-wrap svg {
+        width: 28px;
+        height: 28px;
+      }
+
+      h1 {
+        font-family: var(--font-display);
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 8px;
+        color: var(--text);
+      }
+
+      p.desc {
+        font-size: 14px;
+        line-height: 1.6;
+        color: var(--text-muted);
+        margin: 0 0 24px;
+      }
+
+      .details {
+        text-align: left;
+        background: var(--surface2);
+        border-radius: var(--radius-md);
+        padding: 12px 16px;
+        font-size: 13px;
+        color: var(--text-muted);
+        margin: 0 0 24px;
+        word-break: break-word;
+      }
+
+      .details span {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      button {
+        font-family: var(--font-base);
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: var(--radius-md);
+        padding: 11px 22px;
+        cursor: pointer;
+        transition:
+          background var(--transition-fast),
+          border-color var(--transition-fast);
+      }
+
+      .btn-primary {
+        background: var(--accent);
+        border: 1px solid var(--accent);
+        color: #ffffff;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+      }
+
+      .btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--text-muted);
+      }
+      .btn-secondary:hover {
+        border-color: var(--text-dim);
+        color: var(--text);
+      }
+
+      .hidden {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body class="light">
+    <div class="card" id="card">
+      <div class="icon-wrap" id="iconWrap">
+        <div class="spinner" id="spinner"></div>
+      </div>
+
+      <h1 id="title">Đang chờ xác thực</h1>
+      <p class="desc" id="desc">
+        Vui lòng đợi trong giây lát, trang đang chờ nhận dữ liệu xác thực từ ứng
+        dụng.
+      </p>
+
+      <div class="details hidden" id="details"></div>
+
+      <div class="actions hidden" id="actions"></div>
+    </div>
+
+    <script>
+      (function () {
+        /* ====== CẤU HÌNH ======
+         * Vì file này được phục vụ tĩnh trong public/ nên thường nằm cùng origin
+         * với ứng dụng React. Có thể thay bằng origin cố định nếu host khác domain.
+         */
+        let PARENT_ORIGIN = window.location.origin;
+
+        /* BASE_URL mặc định nếu React component không truyền kèm baseUrl qua message */
+        let DEFAULT_BASE_URL =
+          "https://money-missile-lanes-executives.trycloudflare.com"; // TODO: điền BASE_URL mặc định nếu cần, vd: "https://api.example.com"
+
+        let TIMEOUT_MS = 15000; // thời gian tối đa chờ nhận dữ liệu từ cửa sổ cha
+        let hasReceivedData = false;
+        let waitTimeoutId = null;
+        let lastParams = null; // lưu lại để cho phép "Thử lại"
+
+        let els = {
+          iconWrap: document.getElementById("iconWrap"),
+          title: document.getElementById("title"),
+          desc: document.getElementById("desc"),
+          details: document.getElementById("details"),
+          actions: document.getElementById("actions"),
+        };
+
+        let ICONS = {
+          success:
+            '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M5 13l4 4L19 7" stroke="#ad8f51" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            "</svg>",
+          error:
+            '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+            '<path d="M6 6l12 12M18 6L6 18" stroke="#d64f3c" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>' +
+            "</svg>",
+        };
+
+        function clearActions() {
+          els.actions.innerHTML = "";
+          els.actions.classList.add("hidden");
+        }
+
+        function addAction(label, onClick, letiant) {
+          let btn = document.createElement("button");
+          btn.textContent = label;
+          btn.className =
+            letiant === "primary" ? "btn-primary" : "btn-secondary";
+          btn.addEventListener("click", onClick);
+          els.actions.appendChild(btn);
+          els.actions.classList.remove("hidden");
+        }
+
+        function renderIdle() {
+          els.iconWrap.classList.remove("is-error");
+          els.iconWrap.innerHTML = '<div class="spinner"></div>';
+          els.title.textContent = "Đang chờ xác thực";
+          els.desc.textContent =
+            "Vui lòng đợi trong giây lát, trang đang chờ nhận dữ liệu xác thực từ ứng dụng.";
+          els.details.classList.add("hidden");
+          clearActions();
+        }
+
+        function renderLoading() {
+          els.iconWrap.classList.remove("is-error");
+          els.iconWrap.innerHTML = '<div class="spinner"></div>';
+          els.title.textContent = "Đang xử lý yêu cầu";
+          els.desc.textContent =
+            "Đang gửi yêu cầu lấy hoá đơn, vui lòng không đóng cửa sổ này.";
+          els.details.classList.add("hidden");
+          clearActions();
+        }
+
+        function renderSuccess(id) {
+          els.iconWrap.classList.remove("is-error");
+          els.iconWrap.innerHTML = ICONS.success;
+          els.title.textContent = "Yêu cầu hoá đơn thành công";
+          els.desc.textContent =
+            "Hệ thống đã xử lý hoá đơn của bạn thành công.";
+          els.details.innerHTML =
+            "Mã đơn hàng: <span>" + escapeHtml(String(id)) + "</span>";
+          els.details.classList.remove("hidden");
+          clearActions();
+          addAction(
+            "Đóng",
+            function () {
+              window.close();
+            },
+            "primary",
+          );
+        }
+
+        function renderError(message, allowRetry) {
+          els.iconWrap.classList.add("is-error");
+          els.iconWrap.innerHTML = ICONS.error;
+          els.title.textContent = "Không thể lấy hoá đơn";
+          els.desc.textContent =
+            message || "Đã có lỗi xảy ra, vui lòng thử lại.";
+          els.details.classList.add("hidden");
+          clearActions();
+          if (allowRetry) {
+            addAction(
+              "Thử lại",
+              function () {
+                if (lastParams)
+                  fetchInvoice(
+                    lastParams.token,
+                    lastParams.id,
+                    lastParams.baseUrl,
+                  );
+              },
+              "primary",
+            );
+          }
+          addAction(
+            "Đóng",
+            function () {
+              window.close();
+            },
+            "secondary",
+          );
+        }
+
+        function escapeHtml(str) {
+          let div = document.createElement("div");
+          div.textContent = str;
+          return div.innerHTML;
+        }
+
+        function notifyOpener(success, payload) {
+          if (window.opener) {
+            try {
+              window.opener.postMessage(
+                { type: "INVOICE_RESULT", success: success, payload: payload },
+                PARENT_ORIGIN,
+              );
+            } catch (e) {
+              /* bỏ qua nếu opener không còn tồn tại */
+            }
+          }
+        }
+
+        function fetchInvoice(token, id, baseUrl) {
+          renderLoading();
+          let url =
+            (baseUrl || DEFAULT_BASE_URL) +
+            "/api/v1/order/invoice?id=" +
+            encodeURIComponent(id);
+
+          fetch(url, {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + token,
+              Accept: "application/json",
+            },
+          })
+            .then(function (res) {
+              if (res.status >= 200 && res.status < 300) {
+                return res
+                  .json()
+                  .catch(function () {
+                    return null;
+                  })
+                  .then(function (data) {
+                    renderSuccess(id);
+                    notifyOpener(true, data);
+                  });
+              }
+              console.log("data từ server: ", res);
+              let message = "Yêu cầu thất bại (mã lỗi " + res.status + ").";
+              renderError(message, true);
+              notifyOpener(false, { status: res.status });
+            })
+            .catch(function (err) {
+              renderError(
+                "Không thể kết nối tới máy chủ. Vui lòng kiểm tra đường truyền.",
+                true,
+              );
+              notifyOpener(false, { error: String(err) });
+            });
+        }
+
+        function handleMessage(event) {
+          if (event.origin !== PARENT_ORIGIN) {
+            return; // bỏ qua message từ origin không xác định
+          }
+          let data = event.data;
+          console.log("handlemessage: ", data);
+          if (!data || data.type !== "INVOICE_AUTH") return;
+          if (hasReceivedData) return; // chỉ xử lý dữ liệu một lần
+
+          hasReceivedData = true;
+          if (waitTimeoutId) clearTimeout(waitTimeoutId);
+
+          let token = data.token;
+          let id = data.id;
+          let baseUrl = data.baseUrl;
+
+          if (!token || !id) {
+            renderError("Thiếu dữ liệu xác thực (token hoặc id).", false);
+            notifyOpener(false, { error: "missing_params" });
+            return;
+          }
+
+          lastParams = { token: token, id: id, baseUrl: baseUrl };
+          fetchInvoice(token, id, baseUrl);
+        }
+
+        window.addEventListener("message", handleMessage);
+
+        window.addEventListener("load", function () {
+          renderIdle();
+
+          // Báo cho cửa sổ cha biết trang đã sẵn sàng nhận dữ liệu
+          if (window.opener) {
+            try {
+              window.opener.postMessage(
+                { type: "INVOICE_READY" },
+                PARENT_ORIGIN,
+              );
+            } catch (e) {
+              /* opener khác origin hoặc không tồn tại */
+            }
+          }
+
+          waitTimeoutId = setTimeout(function () {
+            if (!hasReceivedData) {
+              renderError(
+                "Không nhận được dữ liệu xác thực từ ứng dụng chính.",
+                false,
+              );
+            }
+          }, TIMEOUT_MS);
+        });
+      })();
+    </script>
+  </body>
+</html>
