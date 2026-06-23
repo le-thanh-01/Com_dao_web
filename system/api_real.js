@@ -5,8 +5,9 @@ import { Mock_Database } from "./api_mock";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-export const BASE_URL =
-  "https://eau-customize-manhattan-tourism.trycloudflare.com";
+export let BASE_URL =
+  localStorage.getItem("url") ??
+  "https://ourselves-models-rejected-douglas.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
