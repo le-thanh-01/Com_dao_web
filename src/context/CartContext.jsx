@@ -24,7 +24,7 @@ const QUOTA_EXCLUDED_BED_IDS = new Set([25]);
  */
 const getCountableBeds = (productsList) =>
   productsList.filter(
-    (p) => p.cats?.includes("bed") && !QUOTA_EXCLUDED_BED_IDS.has(p.id),
+    (p) => p.id >= 9 && p.id <= 13 && !QUOTA_EXCLUDED_BED_IDS.has(p.id),
   );
 
 /**
@@ -44,15 +44,13 @@ const getCountableBeds = (productsList) =>
 const evaluateProductQuota = (productId, targetCart, productsList) => {
   const qty = targetCart[productId] || 0;
   const product = productsList.find((p) => p.id === productId);
-  if (!product)
-    return { isBlocked: false, isTopping: false, isDrink: false, qty: 0 };
+  if (!product) return { isBlocked: false, isDrink: false, qty: 0 };
 
-  const isTopping = product.cats?.includes("topping");
-  const isDrink = product.cats?.includes("drink");
+  // const isTopping = product.cats?.includes("topping");
+  const isDrink = product.id > 30 && product.id < 40;
 
   // Không phải topping/drink → không bao giờ bị chặn bởi quota
-  if (!isTopping && !isDrink)
-    return { isBlocked: false, isTopping, isDrink, qty };
+  if (!isDrink) return { isBlocked: false, isDrink, qty };
 
   // THAY ĐỔI: chỉ đếm bed được phép, loại trừ id trong QUOTA_EXCLUDED_BED_IDS
   const countableBeds = getCountableBeds(productsList);
@@ -64,29 +62,45 @@ const evaluateProductQuota = (productId, targetCart, productsList) => {
 
   let isBlocked = false;
 
-  if (isTopping) {
-    const tops = productsList.filter((p) => p.cats?.includes("topping"));
-    const usedToppings = tops.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
-    const maxToppings = totalBeds * 2;
-    const maxPerTopping = totalBeds; // mỗi loại topping tối đa = số bed
+  // if (isTopping) {
+  //   const tops = productsList.filter((p) => p.cats?.includes("topping"));
+  //   const usedToppings = tops.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
+  //   const maxToppings = totalBeds * 2;
+  //   const maxPerTopping = totalBeds; // mỗi loại topping tối đa = số bed
 
-    isBlocked =
-      !hasBed ||
-      (qty === 0 && usedToppings >= maxToppings) ||
-      (qty > 0 && usedToppings >= maxToppings) ||
-      qty >= maxPerTopping;
-  } else {
-    const drinks = productsList.filter((p) => p.cats?.includes("drink"));
-    const usedDrinks = drinks.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
-    const maxDrinks = totalBeds * 1;
+  //   isBlocked =
+  //     !hasBed ||
+  //     (qty === 0 && usedToppings >= maxToppings) ||
+  //     (qty > 0 && usedToppings >= maxToppings) ||
+  //     qty >= maxPerTopping;
+  // } else
 
-    isBlocked =
-      !hasBed ||
-      (qty === 0 && usedDrinks >= maxDrinks) ||
-      (qty > 0 && usedDrinks >= maxDrinks);
-  }
+  const drinks = productsList.filter((p) => p.id > 30 && p.id < 40);
+  console.log("drink: ", drinks);
+  const usedDrinks = drinks.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
+  const maxDrinks = totalBeds * 1;
 
-  return { isBlocked, isTopping, isDrink, qty };
+  isBlocked =
+    !hasBed ||
+    (qty === 0 && usedDrinks >= maxDrinks) ||
+    (qty > 0 && usedDrinks >= maxDrinks);
+
+  console.log(
+    "targerCart: ",
+    targetCart,
+    "isBlocked: ",
+    isBlocked,
+    "\nHasbed: ",
+    hasBed,
+    "\nqty: ",
+    qty,
+    "\nusedDrink: ",
+    usedDrinks,
+    "\nmaxDrink: ",
+    maxDrinks,
+  );
+
+  return { isBlocked, isDrink, qty };
 };
 
 /*
@@ -257,22 +271,22 @@ export function CartProvider({
   const quota = useMemo(() => {
     // THAY ĐỔI: dùng getCountableBeds() → loại trừ bed id=25 khỏi maxTopping/maxDrink
     const countableBeds = getCountableBeds(products);
-    const tops = products.filter((p) => p.cats?.includes("topping"));
-    const drinks = products.filter((p) => p.cats?.includes("drink"));
+    // const tops = products.filter((p) => p.cats?.includes("topping"));
+    const drinks = products.filter((p) => p.id > 30 && p.id < 40);
 
     const totalBeds = countableBeds.reduce((s, p) => s + (cart[p.id] || 0), 0);
-    const usedToppings = tops.reduce((s, p) => s + (cart[p.id] || 0), 0);
+    // const usedToppings = tops.reduce((s, p) => s + (cart[p.id] || 0), 0);
     const usedDrinks = drinks.reduce((s, p) => s + (cart[p.id] || 0), 0);
-    const maxToppings = totalBeds * 2;
+    // const maxToppings = totalBeds * 2;
     const maxDrinks = totalBeds * 1;
 
     return {
       totalBeds,
-      maxToppings,
+      // maxToppings,
       maxDrinks,
-      usedToppings,
+      // usedToppings,
       usedDrinks,
-      toppingFull: totalBeds > 0 && usedToppings >= maxToppings,
+      // toppingFull: totalBeds > 0 && usedToppings >= maxToppings,
       drinkFull: totalBeds > 0 && usedDrinks >= maxDrinks,
       hasBed: totalBeds > 0,
     };

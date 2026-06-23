@@ -21,7 +21,8 @@ import "./Account.css";
 
 /* ─── helpers ─── */
 const STATUS_MAP = {
-  DELIVERED: { label: "Đã giao", cls: "order-card__status--delivered" },
+  FINISHED: { label: "Đã giao", cls: "order-card__status--delivered" },
+  CONFIRMED: { label: "Đã nhận đơn", cls: "order-card__status--pending" },
   DELIVERING: { label: "Đang giao", cls: "order-card__status--pending" },
   CANCELLED: { label: "Đã huỷ", cls: "order-card__status--cancelled" },
   PAYING: { label: "Chờ thanh toán", cls: "order-card__status--pending" },
@@ -66,13 +67,17 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
 
   const handleConfirm = async () => {
     setActionError("");
+    //confirm này là của khách, không phải trạng thái đã nhận đơn CONFIRMED
     setActionLoading("confirm");
     const { error } = await onConfirm(order.id);
     setActionLoading(null);
     if (error) setActionError(error);
   };
 
-  const isPending = order.state === "PENDING" || order.state === "PAYING";
+  const isPending =
+    order.state === "CONFIRMED" ||
+    order.state === "PAYING" ||
+    order.state === "DELIVERING";
 
   return (
     <div className="order-card">
@@ -81,7 +86,7 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
           <div className="order-card__id">{order.id}</div>
           <div className="order-card__date">{order.date}</div>
         </div>
-        <span className={`order-card__status ${st.cls}`}>{st.label}</span>
+        <span className={`order-card__status ${st?.cls}`}>{st?.label}</span>
       </div>
 
       <div className="order-card__body">
@@ -120,7 +125,7 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
               <button
                 className="order-card__action-btn order-card__action-btn--cancel"
                 onClick={handleCancel}
-                disabled={!!actionLoading}
+                disabled={!!actionLoading || order.state === "DELIVERING"}
               >
                 {actionLoading === "cancel" ? (
                   <Spinner size={13} color="var(--red)" />
@@ -149,7 +154,7 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
                     ? () => setQROpen(true)
                     : handleConfirm
                 }
-                disabled={!!actionLoading || order.state == "PENDING"}
+                disabled={!!actionLoading || order.state == "CONFIRMED"}
               >
                 {actionLoading === "confirm" ? (
                   <Spinner size={13} color="#111" />
@@ -193,7 +198,8 @@ function PanelProfile({ onSave }) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (user) setForm({ ...user });
+    if (user)
+      setForm({ ...user, date_of_birth: deformatDate(user.date_of_birth) });
   }, [user]);
 
   const set = (k) => (e) => {
@@ -206,6 +212,12 @@ function PanelProfile({ onSave }) {
 
     const [year, month, day] = dateStr.split("-");
     return `${day}-${month}-${year}`;
+  };
+  const deformatDate = (dateStr) => {
+    if (!dateStr) return "";
+
+    const [day, month, year] = dateStr.split("-");
+    return `${year}-${month}-${day}`;
   };
   const handleSave = async () => {
     setSaving(true);
@@ -946,7 +958,7 @@ function PanelHistory() {
     fetchOrdersForStatus,
   } = useOrders("history");
   console.log("historyorder: ", historyOrders);
-  const delivered = historyOrders.filter((o) => o.state === "DELIVERED");
+  const delivered = historyOrders.filter((o) => o.state === "FINISHED");
   const cancelled = historyOrders.filter((o) => o.state === "CANCELLED");
   useEffect(() => {
     fetchOrdersForStatus("history");
@@ -979,10 +991,7 @@ function PanelHistory() {
             <div className="account-stat">
               <div className="account-stat__value">
                 {delivered
-                  .reduce(
-                    (s, o) => s + parseInt(o.total.replace(/[^0-9]/g, ""), 10),
-                    0,
-                  )
+                  .reduce((s, o) => s + o.total, 0)
                   .toLocaleString("vi-VN")}
                 đ
               </div>

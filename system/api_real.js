@@ -6,7 +6,7 @@ import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
 export const BASE_URL =
-  "https://chat-magnetic-qualities-automobiles.trycloudflare.com";
+  "https://eau-customize-manhattan-tourism.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Báo lỗi kỹ thuật - 4S - Cơm đảo Bách Khoa</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              bg: '#fbfaf7',
+              surface: '#ffffff',
+              border: '#d4d2cc',
+              text: '#1a1a18',
+              muted: '#6e6c67',
+              accent: '#ad8f51',
+              hover: '#947841',
+              error: '#d64f3c'
+            }
+          },
+          fontFamily: { sans: ['"Be Vietnam Pro"', 'sans-serif'] }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-brand-bg text-brand-text flex flex-col min-h-screen">
+
+  <nav class="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-brand-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between h-16 items-center">
+        <a href="https://le-thanh-01.github.io/Com_dao_web/" class="flex items-center space-x-2">
+          <span class="text-xl font-bold tracking-tight text-brand-accent">
+            <span class="bg-brand-accent text-white px-2 py-0.5 rounded mr-1">4S</span>Cơm đảo Bách Khoa
+          </span>
+        </a>
+        <a href="https://le-thanh-01.github.io/Com_dao_web/" class="text-sm font-medium text-brand-muted hover:text-brand-accent transition-colors">
+          &larr; Quay lại Trang chủ
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="flex-grow max-w-2xl mx-auto px-4 py-12 sm:px-6 lg:py-16 w-full">
+    <div class="bg-brand-surface rounded-2xl shadow-sm border border-brand-border p-8 sm:p-12">
+      <header class="mb-8 border-b border-brand-border pb-6">
+        <h1 class="text-3xl font-extrabold text-brand-text tracking-tight mb-2">Báo lỗi hệ thống</h1>
+        <p class="text-sm text-brand-muted">Phát hiện lỗi hiển thị hoặc lỗi tính năng? Hãy thông báo cho chúng tôi xử lý.</p>
+      </header>
+
+      <form id="bugForm" class="space-y-6" onsubmit="handleSubmit(event)">
+        <div>
+          <label class="block text-sm font-semibold text-brand-text mb-2">Loại sự cố gặp phải</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label class="flex items-center p-3 bg-brand-bg border border-brand-border rounded-xl cursor-pointer hover:border-brand-accent transition-colors">
+              <input type="radio" name="bugType" checked class="accent-brand-accent mr-3">
+              <span class="text-sm">Lỗi hiển thị vỡ khung (UI)</span>
+            </label>
+            <label class="flex items-center p-3 bg-brand-bg border border-brand-border rounded-xl cursor-pointer hover:border-brand-accent transition-colors">
+              <input type="radio" name="bugType" class="accent-brand-accent mr-3">
+              <span class="text-sm">Nút bấm không hoạt động</span>
+            </label>
+            <label class="flex items-center p-3 bg-brand-bg border border-brand-border rounded-xl cursor-pointer hover:border-brand-accent transition-colors">
+              <input type="radio" name="bugType" class="accent-brand-accent mr-3">
+              <span class="text-sm">Tính toán sai giá/số lượng</span>
+            </label>
+            <label class="flex items-center p-3 bg-brand-bg border border-brand-border rounded-xl cursor-pointer hover:border-brand-accent transition-colors">
+              <input type="radio" name="bugType" class="accent-brand-accent mr-3">
+              <span class="text-sm">Lỗi khác / Tải trang chậm</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-sm font-semibold text-brand-text mb-2">Mô tả chi tiết lỗi và các bước gặp lỗi</label>
+          <textarea required rows="4" placeholder="Ví dụ: Khi nhấn nút Thêm món tại sản phẩm cơm gà giòn, giỏ hàng không tự cập nhật số lượng tăng lên..." class="w-full bg-brand-bg border border-brand-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-accent transition-colors placeholder:text-brand-muted/60"></textarea>
+        </div>
+
+        <button type="submit" class="w-full bg-brand-error hover:opacity-90 text-white font-medium rounded-xl py-3 text-sm transition-opacity shadow-sm">
+          Gửi báo cáo sự cố
+        </button>
+      </form>
+
+      <div id="successMessage" class="hidden text-center py-8 space-y-3">
+        <div class="w-16 h-16 bg-[rgba(214,79,60,0.1)] text-brand-error rounded-full flex items-center justify-center mx-auto text-2xl font-bold">!</div>
+        <h3 class="text-xl font-bold text-brand-text">Đã ghi nhận lỗi!</h3>
+        <p class="text-sm text-brand-muted max-w-md mx-auto">Cảm ơn tinh thần đóng góp của bạn. Báo cáo lỗi kỹ thuật của bạn đã được tiếp nhận giả lập trên hệ thống UI.</p>
+        <button onclick="resetForm()" class="text-sm text-brand-accent hover:underline mt-4 block mx-auto">Báo lỗi thêm</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-brand-text text-brand-border py-8 text-center text-sm">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>&copy; 2026 4S - Cơm đảo Bách Khoa — Dự án mô phỏng giao diện phi thương mại.</p>
+    </div>
+  </footer>
+
+  <script>
+    function handleSubmit(e) {
+      e.preventDefault();
+      document.getElementById('bugForm').classList.add('hidden');
+      document.getElementById('successMessage').classList.remove('hidden');
+    }
+    function resetForm() {
+      document.getElementById('bugForm').reset();
+      document.getElementById('bugForm').classList.remove('hidden');
+      document.getElementById('successMessage').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

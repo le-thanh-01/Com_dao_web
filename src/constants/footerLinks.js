@@ -12,8 +12,8 @@ export const SOCIALS = [
 export const FOOTER_LINKS = {
   "Về chúng tôi": [
     { content: "Giới thiệu", link: path + "pages/about.html" },
-    { content: "Góp ý", link: "#" },
-    { content: "Báo lỗi", link: "#" },
+    { content: "Góp ý", link: path + "pages/gop-y.html" },
+    { content: "Báo lỗi", link: path + "pages/bao-loi.html" },
   ],
   "Khám phá": [
     {
