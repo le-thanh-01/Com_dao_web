@@ -401,13 +401,13 @@ export function DataProvider({ children }) {
   const [socketNotice, setSocketNotice] = useState([]);
 
   useEffect(() => {
-    if (!loginState) return;
+    // if (!loginState) return;
     fetchNotices().then(({ data, error }) => {
       if (!error) {
         setSocketNotice(data.content);
       }
     });
-  }, [loginState]); // eslint-disable-line
+  }, []); // eslint-disable-line
 
   const formatAndPushNotice = (type, rawData) => {
     let payload = rawData;
@@ -424,6 +424,7 @@ export function DataProvider({ children }) {
   // useEffect(() => {
   //   console.log("NOTICEDATAÂ: ", socketNotice);
   // }, [socketNotice]);
+
   useEffect(() => {
     const token = getToken();
     // Gọi hàm khởi tạo ở api.js. Hàm này tự động từ chối nếu _token là null

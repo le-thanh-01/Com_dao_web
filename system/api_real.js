@@ -350,7 +350,7 @@ export async function confirmDelivery(id) {
 export async function fetchNotices() {
   return safeFetch(`${BASE_URL}/api/v1/notice?page=0&size=10`, {
     method: "GET",
-    headers: authHeaders(),
+    headers: baseHeaders(),
   });
 }
 
@@ -388,7 +388,7 @@ export const initWebSocket = (token, onNotice) => {
     connectHeaders: {
       Authorization: `Bearer ${token}`,
     },
-    // debug: (str) => console.log("STOMP: ", str),
+    debug: (str) => console.log("STOMP: ", str),
 
     onConnect: () => {
       // console.log("Connected");
