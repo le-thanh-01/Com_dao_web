@@ -76,7 +76,7 @@ const evaluateProductQuota = (productId, targetCart, productsList) => {
   // } else
 
   const drinks = productsList.filter((p) => p.id > 30 && p.id < 40);
-  console.log("drink: ", drinks);
+  // console.log("drink: ", drinks);
   const usedDrinks = drinks.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
   const maxDrinks = totalBeds * 1;
 
@@ -85,20 +85,20 @@ const evaluateProductQuota = (productId, targetCart, productsList) => {
     (qty === 0 && usedDrinks >= maxDrinks) ||
     (qty > 0 && usedDrinks >= maxDrinks);
 
-  console.log(
-    "targerCart: ",
-    targetCart,
-    "isBlocked: ",
-    isBlocked,
-    "\nHasbed: ",
-    hasBed,
-    "\nqty: ",
-    qty,
-    "\nusedDrink: ",
-    usedDrinks,
-    "\nmaxDrink: ",
-    maxDrinks,
-  );
+  // console.log(
+  //   "targerCart: ",
+  //   targetCart,
+  //   "isBlocked: ",
+  //   isBlocked,
+  //   "\nHasbed: ",
+  //   hasBed,
+  //   "\nqty: ",
+  //   qty,
+  //   "\nusedDrink: ",
+  //   usedDrinks,
+  //   "\nmaxDrink: ",
+  //   maxDrinks,
+  // );
 
   return { isBlocked, isDrink, qty };
 };
@@ -169,9 +169,9 @@ export function CartProvider({
   //phẩm trước vẫn đang gửi
   const isSyncing = useRef(false);
 
-  useEffect(() => {
-    console.log("CART_IN_CẢTCONTEXT", cart);
-  }, [cart]);
+  // useEffect(() => {
+  //   console.log("CART_IN_CẢTCONTEXT", cart);
+  // }, [cart]);
 
   /* ── Restore cart từ server khi initialCart về lần đầu ── */
   const initialised = useRef(false);
@@ -407,6 +407,7 @@ export function CartProvider({
   const contextValue = useMemo(
     () => ({
       cart,
+      cartRef,
       increment,
       decrement,
       setQty,
@@ -420,6 +421,7 @@ export function CartProvider({
     }),
     [
       cart,
+      cartRef,
       increment,
       decrement,
       setQty,

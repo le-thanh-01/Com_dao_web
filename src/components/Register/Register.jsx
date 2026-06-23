@@ -2,6 +2,7 @@ import { useState } from "react";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
 import { addProfile } from "../../context/DataContext";
+import { PageLoader } from "../Skeleton/Skeleton";
 import "./Register.css";
 
 const INITIAL = {
@@ -21,7 +22,10 @@ function validate(fields) {
   else if (!/\S+@\S+\.\S+/.test(fields.email))
     errors.email = "Email không hợp lệ.";
   if (!fields.phone.trim()) errors.phone = "Vui lòng nhập số điện thoại.";
-  else if (!/^[0-9]{9,11}$/.test(fields.phone.replace(/\s/g, "")))
+  else if (
+    fields.phone.trim().length < 10 ||
+    !/^[0-9]{9,11}$/.test(fields.phone.replace(/\s/g, ""))
+  )
     errors.phone = "Số điện thoại không hợp lệ.";
   if (!fields.password.trim()) errors.password = "Vui lòng nhập mật khẩu.";
   else if (fields.password.length < 6)
@@ -58,20 +62,41 @@ const Field = ({
 export default function Register({ onNavigate }) {
   const [fields, setFields] = useState(INITIAL);
   const [errors, setErrors] = useState({});
+  const [registerLoading, setRegisterLoading] = useState(false);
 
   const handleChange = (name, value) => {
     setFields((prev) => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const errs = validate(fields);
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
     // TODO: call register API, then redirect
-    addProfile(fields);
+    setRegisterLoading(true);
+    const { data, error } = await addProfile(fields);
+    setRegisterLoading(false);
+    // console.log(error);
+    if (
+      error &&
+      error !==
+        "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+    ) {
+      setErrors((prev) => ({
+        ...prev,
+        email: "Email hoặc số điện thoại đã tồn tại",
+        phone: "Email hoặc số điện thoại đã tồn tại",
+      }));
+      return;
+    } else
+      setErrors((prev) => ({
+        ...prev,
+        email: "",
+        phone: "",
+      }));
     onNavigate("login");
   };
 
@@ -177,6 +202,7 @@ export default function Register({ onNavigate }) {
       </div>
 
       <Footer />
+      {registerLoading && <PageLoader />}
     </div>
   );
 }

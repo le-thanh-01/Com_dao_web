@@ -44,7 +44,9 @@ export default function Footer() {
       </div>
 
       <div className="footer__bottom">
-        <span className="footer__copy">4S - Cơm đảo Bách Khoa</span>
+        <span className="footer__copy">
+          <strong>4S - Cơm đảo Bách Khoa</strong>
+        </span>
         <span className="footer__copy">
           <strong>12 Ngõ 30/18/3 Tạ Quang Bửu, P. Bạch Mai, Hà Nội</strong>
           <br />

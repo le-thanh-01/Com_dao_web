@@ -84,14 +84,14 @@ function QRScanner(orderId = 1) {
     if (!orderId) return;
 
     const targetId = typeof orderId === "object" ? orderId.id : orderId;
-    console.log("TẢGETID: ", targetId);
+    // console.log("TẢGETID: ", targetId);
     const loadQR = async () => {
       const { data, error } = await fetchQR(targetId);
       if (!error) {
         setQRLink(data.qr_code);
-        console.log("Dữ liệu QRLink: ", { data, error });
+        // console.log("Dữ liệu QRLink: ", { data, error });
       } else {
-        console.error("Lỗi từ QRScanner: ", error);
+        // console.error("Lỗi từ QRScanner: ", error);
       }
     };
 
@@ -179,10 +179,12 @@ export function QRScannerModal({
             <li>
               <p>
                 Trường hợp gặp sự cố khi thanh toán, vui lòng
-                <strong onClick={() => invoiceRequest(orderId)}>
+                <strong> reload lại trang</strong>,
+                <strong> kiểm tra tình trạng mạng </strong>
+                {/* <strong onClick={() => invoiceRequest(orderId)}>
                   {" "}
                   nhận hoá đơn thanh toán qua email{" "}
-                </strong>
+                </strong> */}
                 hoặc{" "}
                 <a href={path} target="_blank" rel="noopener noreferrer">
                   <strong> liên hệ CSKH</strong>
@@ -288,7 +290,7 @@ export default function Checkout({ onNavigate }) {
       discount: discount,
       note: note,
     });
-    console.log("CHECKOUTDATA: ", { data: data, error: error });
+    // console.log("CHECKOUTDATA: ", { data: data, error: error });
     setOrderLoading(false);
     //if (!error) {
     if (true) {

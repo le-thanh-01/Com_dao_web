@@ -7,7 +7,7 @@ import { Client } from "@stomp/stompjs";
 
 export let BASE_URL =
   localStorage.getItem("url") ??
-  "https://ourselves-models-rejected-douglas.trycloudflare.com";
+  "https://tan-reason-distances-paperbacks.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
@@ -85,8 +85,8 @@ const safeFetch = async (url, options) => {
       return parseServerError(res);
     }
     const data = await res.json();
-    console.log(`dữ liệu từ  ${url}  là: `);
-    console.log(data);
+    // console.log(`dữ liệu từ  ${url}  là: `);
+    // console.log(data);
     return respond(data);
   } catch (err) {
     return fail(`Lỗi kết nối: ${err.message}`);
@@ -101,7 +101,7 @@ const SocketNotice = [];
 /** POST /auth/login */
 export async function login({ username, password }) {
   if (!username || !password) return fail("Vui lòng nhập đầy đủ thông tin.");
-  console.log("đã thực hiện login");
+  // console.log("đã thực hiện login");
   return safeFetch(`${BASE_URL}/api/v1/user/login`, {
     method: "POST",
     headers: baseHeaders(),
@@ -143,10 +143,10 @@ export async function register(fields) {
  */
 export async function fetchLoginState() {
   if (!_token) {
-    console.log("Không có token sẵn trong máy. Bỏ qua");
+    // console.log("Không có token sẵn trong máy. Bỏ qua");
     return { data: { loginState: false }, error: null };
   }
-  console.log("đang kiểm tra token");
+  // console.log("đang kiểm tra token");
   const res = await fetch(`${BASE_URL}/api/v1/token`, {
     method: "POST",
     headers: baseHeaders(),
@@ -156,7 +156,7 @@ export async function fetchLoginState() {
   if (!res.ok) return parseServerError(res);
 
   const data = await res.json();
-  console.log("Fetch login data : ", data);
+  // console.log("Fetch login data : ", data);
   if (!data) return fail("Không nhận được dữ liệu từ server.");
   return respond(data); // Server trả: { loginState: true, expiresAt }
 }
@@ -250,18 +250,19 @@ export async function fetchCart() {
     headers: authHeaders(),
   });
   if (error) return respond(data.content);
-  console.log("datacart", data);
+  // console.log("datacart", data);
   const formattedCart = data.content.reduce((acc, item) => {
     acc[item.product.id] = item.quantity;
     return acc;
   }, {});
+  const productCart = data.content.map((item) => item.product);
 
-  return respond(formattedCart);
+  return respond({ formattedCart, productCart });
 }
 
 /** PUT /cart */
 export async function updateCart(cartData) {
-  console.log("CARTDATA: ", cartData);
+  // console.log("CARTDATA: ", cartData);
   return safeFetch(`${BASE_URL}/api/v1/cart/add`, {
     method: "POST",
     headers: authHeaders(),
@@ -298,7 +299,7 @@ export async function fetchOrders(status, page = 0) {
     ...data,
     content: updateOrderItems,
   };
-  console.log("ORDERSDATA: ", updatedData);
+  // console.log("ORDERSDATA: ", updatedData);
   return respond(updatedData);
 }
 
@@ -368,7 +369,7 @@ let onNoticeCallback = null; // Lưu trữ hàm callback từ React
 export const initWebSocket = (token, onNotice) => {
   // 1. Kiểm tra điều kiện token
   if (!token) {
-    console.log("Token null: Ngắt kết nối hoặc từ chối khởi tạo.");
+    // console.log("Token null: Ngắt kết nối hoặc từ chối khởi tạo.");
     disconnectWebSocket();
     return;
   }
@@ -387,13 +388,13 @@ export const initWebSocket = (token, onNotice) => {
     connectHeaders: {
       Authorization: `Bearer ${token}`,
     },
-    debug: (str) => console.log("STOMP: ", str),
+    // debug: (str) => console.log("STOMP: ", str),
 
     onConnect: () => {
-      console.log("Connected");
+      // console.log("Connected");
       // Đăng ký các kênh và sử dụng callback để đẩy dữ liệu về Context
       stompClient.subscribe("/topic/global", (msg) => {
-        console.log("GLOBAL MSG", msg);
+        // console.log("GLOBAL MSG", msg);
         if (onNoticeCallback) onNoticeCallback("global", msg.body);
       });
 
@@ -407,7 +408,7 @@ export const initWebSocket = (token, onNotice) => {
     },
 
     onStompError: (frame) => {
-      console.error("Lỗi giao thức STOMP:", frame.headers["message"]);
+      // console.error("Lỗi giao thức STOMP:", frame.headers["message"]);
     },
   });
 

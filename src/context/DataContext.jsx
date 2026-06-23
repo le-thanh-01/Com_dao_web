@@ -86,9 +86,9 @@ const useResource = (fetcher, loginState = true) => {
     if (!loginState) return;
 
     setState(initial);
-    fetcher().then(({ data, error }) =>
-      setState({ data, loading: false, error }),
-    );
+    fetcher().then(({ data, error }) => {
+      setState({ data, loading: false, error });
+    });
   }, [loginState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { ...state, refetch };
@@ -165,7 +165,7 @@ export function DataProvider({ children }) {
   const logout = useCallback(() => doLogout(), [doLogout]);
 
   const isLoggedIn = !!loginState;
-  console.log("isLoggenIn: " + isLoggedIn);
+  // console.log("isLoggenIn: " + isLoggedIn);
   /**
    * withTokenGuard — bắt JWT_EXPIRED từ mọi protected call.
    * Nếu nhận được JWT_EXPIRED:
@@ -376,11 +376,18 @@ export function DataProvider({ children }) {
   }, [withTokenGuard, userSettings.refetch]);
 
   /* ── cart ── */
-  const userCart = useResource(fetchCart, isLoggedIn);
+  const fetchCartWrapper = async () => {
+    const response = await fetchCart();
+    if (!response.error && response?.data?.productCart) {
+      response?.data?.productCart.forEach((item) => _mergeProducts([item]));
+    }
+    return { data: response?.data?.formattedCart, error: response.error };
+  };
+  const userCart = useResource(fetchCartWrapper, isLoggedIn);
 
   const updateUserCart = useCallback(
     async (cartData) => {
-      console.log("CART_DATACONTEXT", cartData);
+      // console.log("CART_DATACONTEXT", cartData);
       return withTokenGuard(async () => {
         const result = await updateCart(cartData);
         if (!result.error) userCart.refetch();
@@ -414,9 +421,9 @@ export function DataProvider({ children }) {
 
     setSocketNotice((prev) => [...prev, payload]);
   };
-  useEffect(() => {
-    console.log("NOTICEDATAÂ: ", socketNotice);
-  }, [socketNotice]);
+  // useEffect(() => {
+  //   console.log("NOTICEDATAÂ: ", socketNotice);
+  // }, [socketNotice]);
   useEffect(() => {
     const token = getToken();
     // Gọi hàm khởi tạo ở api.js. Hàm này tự động từ chối nếu _token là null
@@ -437,7 +444,7 @@ export function DataProvider({ children }) {
   const handlerRef = useRef(null);
 
   const InvoiceRequest = useCallback((orderId) => {
-    console.log("ORDERID từ invoice: ", orderId);
+    // console.log("ORDERID từ invoice: ", orderId);
     // Dọn listener cũ nếu người dùng bấm nhiều lần
     if (handlerRef.current) {
       window.removeEventListener("message", handlerRef.current);
@@ -446,10 +453,10 @@ export function DataProvider({ children }) {
     const popup = window.open(INVOICE_PAGE_PATH, "_blank");
     popupRef.current = popup;
 
-    if (!popup) {
-      console.error("Không thể mở cửa sổ. Trình duyệt có thể đã chặn popup.");
-      return;
-    }
+    // if (!popup) {
+    //   console.error("Không thể mở cửa sổ. Trình duyệt có thể đã chặn popup.");
+    //   return;
+    // }
 
     function handleMessage(event) {
       // Chỉ chấp nhận message từ cùng origin (vì invoice.html cùng domain)
@@ -492,7 +499,7 @@ export function DataProvider({ children }) {
       setQRLoading(true);
       return withTokenGuard(async () => {
         const { data, error } = await fetchQR(id);
-        if (error) console.error("Lỗi từ QRFetch: ", error);
+        // if (error) console.error("Lỗi từ QRFetch: ", error);
         setQRLoading(false);
         return { data, error };
       });
@@ -518,9 +525,9 @@ export function DataProvider({ children }) {
     },
     active: null,
   });
-  useEffect(() => {
-    console.log("orderState: ", orderState);
-  }, [orderState]); // eslint-disable-line
+  // useEffect(() => {
+  // console.log("orderState: ", orderState);
+  // }, [orderState]); // eslint-disable-line
 
   // Tải trang đầu tiên (Reset danh sách)
   const fetchOrdersForStatus = useCallback(async (status) => {

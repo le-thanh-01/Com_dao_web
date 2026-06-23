@@ -371,7 +371,7 @@
                     notifyOpener(true, data);
                   });
               }
-              console.log("data từ server: ", res);
+              // console.log("data từ server: ", res);
               let message = "Yêu cầu thất bại (mã lỗi " + res.status + ").";
               renderError(message, true);
               notifyOpener(false, { status: res.status });
@@ -390,7 +390,7 @@
             return; // bỏ qua message từ origin không xác định
           }
           let data = event.data;
-          console.log("handlemessage: ", data);
+          // console.log("handlemessage: ", data);
           if (!data || data.type !== "INVOICE_AUTH") return;
           if (hasReceivedData) return; // chỉ xử lý dữ liệu một lần
 

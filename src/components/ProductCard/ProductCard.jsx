@@ -260,7 +260,7 @@ function QuotaBanner({ type, quota }) {
     }
     const variant = drinkFull ? "full" : "info";
     useEffect(() => {
-      console.log("drinkfull: ", drinkFull);
+      // console.log("drinkfull: ", drinkFull);
     }, [drinkFull]);
     const pct = Math.min(100, Math.round((usedDrinks / maxDrinks) * 100));
     return (

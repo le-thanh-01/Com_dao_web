@@ -60,7 +60,7 @@ export default function Login({ onNavigate }) {
             className="login-card__input"
             type="tel"
             placeholder="Email hoặc số điện thoại:"
-            value={username}
+            // value={username}
             onChange={(e) => setUsername(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
           />
@@ -71,7 +71,7 @@ export default function Login({ onNavigate }) {
               // [MỚI] type thay đổi theo showPwd — "text" khi hiện, "password" khi ẩn
               type={showPwd ? "text" : "password"}
               placeholder="Mật khẩu:"
-              value={password}
+              // value={password}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
             />
