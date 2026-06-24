@@ -259,9 +259,9 @@ function QuotaBanner({ type, quota }) {
       );
     }
     const variant = drinkFull ? "full" : "info";
-    useEffect(() => {
-      // console.log("drinkfull: ", drinkFull);
-    }, [drinkFull]);
+    // useEffect(() => {
+    //   console.log("drinkfull: ", drinkFull);
+    // }, [drinkFull]);
     const pct = Math.min(100, Math.round((usedDrinks / maxDrinks) * 100));
     return (
       <div className={`quota-banner quota-banner--${variant}`}>
@@ -349,14 +349,19 @@ function EmptyGrid({ showToppingBanner, showDrinkBanner }) {
       Sau:   nhận callback onImageLoad(id) để bubble lên ProductGrid
    ═══════════════════════════════════════════ */
 export function ProductCard({ product, onImageLoad }) {
-  const { getStatus, handleIncrement, handleDecrement, handleBedDecrement } =
-    useCart();
+  const {
+    getStatus,
+    handleIncrement,
+    handleDecrement,
+    handleBedDecrement,
+    isBedProduct,
+  } = useCart();
   const { blocked, incBlocked, qty } = getStatus(product.id);
   const ImageUrl = product.image_url;
   // console.log("IMAGEURRLLLL");
   // console.log(ImageUrl);
 
-  const isBed = product.cats?.includes("bed");
+  const isBed = isBedProduct(product);
 
   // THAY ĐỔI: dùng handleBedDecrement nếu là sản phẩm set,
   // handleDecrement thông thường cho các loại khác

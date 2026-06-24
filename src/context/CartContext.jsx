@@ -22,10 +22,9 @@ const QUOTA_EXCLUDED_BED_IDS = new Set([25]);
  * countableBeds — lọc chỉ lấy bed được tính quota (loại trừ QUOTA_EXCLUDED_BED_IDS).
  * Pure helper, dùng chung trong cả evaluateProductQuota và quota useMemo.
  */
+const isBedProduct = (p) => p.id <= 13 && !QUOTA_EXCLUDED_BED_IDS.has(p.id);
 const getCountableBeds = (productsList) =>
-  productsList.filter(
-    (p) => p.id >= 9 && p.id <= 13 && !QUOTA_EXCLUDED_BED_IDS.has(p.id),
-  );
+  productsList.filter((p) => isBedProduct(p));
 
 /**
  * evaluateProductQuota
@@ -132,8 +131,10 @@ const clearExtrasAfterBedDecrement = (updatedCart, productsList) => {
 
   // Hết toàn bộ bed được tính quota → xoá sạch topping và drink
   const result = { ...updatedCart };
+  const _isDrink = (p) => p.id > 30 && p.id < 40;
+  const _isTopping = (p) => p.id > 13 && p.id < 31;
   productsList.forEach((p) => {
-    if (p.cats?.includes("topping") || p.cats?.includes("drink")) {
+    if (_isDrink(p)) {
       delete result[p.id];
     }
   });
@@ -252,18 +253,45 @@ export function CartProvider({
     enqueueUpdate(id, newQuantity);
   }, []);
 
-  const setQty = useCallback(
-    (id, qty) =>
-      setCart((prev) => {
-        if (qty <= 0) {
-          const n = { ...prev };
-          delete n[id];
-          return n;
-        }
-        return { ...prev, [id]: qty };
-      }),
-    [],
-  );
+  const setQty = useCallback((product, qty) => {
+    if (qty <= 0) {
+      const { [product.id]: _, ...rest } = cartRef.current;
+      let nextState = rest;
+      if (isBedProduct(product)) {
+        const currentCartState = cartRef.current;
+        nextState = clearExtrasAfterBedDecrement(nextState, products);
+        const changedItems = {};
+
+        changedItems[product.id] = qty;
+
+        Object.keys(currentCartState).forEach((key) => {
+          if (key != String(product.id)) {
+            const oldVal = currentCartState[key];
+            const newVal = nextState[key] || 0;
+
+            if (oldVal !== newVal) {
+              changedItems[key] = newVal;
+            }
+          }
+        });
+
+        cartRef.current = nextState;
+        setCart(nextState);
+
+        Object.entries(changedItems).forEach(([id, qty]) => {
+          enqueueUpdate(id, qty);
+        });
+      } else cartRef.current = rest;
+    } else {
+      cartRef.current = {
+        ...cartRef.current,
+        [id]: qty,
+      };
+    }
+    setCart(cartRef.current);
+
+    enqueueUpdate(product.id, newQuantity);
+  }, []);
 
   const clearCart = useCallback(() => setCart({}), []);
 
@@ -370,15 +398,15 @@ export function CartProvider({
       } else {
         nextCartState[productId] = newQty;
       }
-
+      // console.log("currentcartstate: ", currentCartState);
       nextCartState = clearExtrasAfterBedDecrement(nextCartState, products);
-
+      // console.log("nextCartstate: ", nextCartState);
       const changedItems = {};
 
       changedItems[productId] = newQty;
 
       Object.keys(currentCartState).forEach((key) => {
-        if (key !== String(productId)) {
+        if (key != String(productId)) {
           const oldVal = currentCartState[key];
           const newVal = nextCartState[key] || 0;
 
@@ -417,6 +445,8 @@ export function CartProvider({
       handleDecrement,
       handleBedDecrement, // THÊM MỚI
       totalItems,
+      getCountableBeds,
+      isBedProduct,
       quota,
     }),
     [
@@ -431,6 +461,8 @@ export function CartProvider({
       handleDecrement,
       handleBedDecrement,
       totalItems,
+      getCountableBeds,
+      isBedProduct,
       quota,
     ],
   );

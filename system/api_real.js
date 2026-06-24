@@ -7,7 +7,7 @@ import { Client } from "@stomp/stompjs";
 
 export let BASE_URL =
   localStorage.getItem("url") ??
-  "https://tan-reason-distances-paperbacks.trycloudflare.com";
+  "https://belts-variance-useful-flyer.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
@@ -85,8 +85,8 @@ const safeFetch = async (url, options) => {
       return parseServerError(res);
     }
     const data = await res.json();
-    // console.log(`dữ liệu từ  ${url}  là: `);
-    // console.log(data);
+    console.log(`dữ liệu từ  ${url}  là: `);
+    console.log(data);
     return respond(data);
   } catch (err) {
     return fail(`Lỗi kết nối: ${err.message}`);
@@ -388,7 +388,7 @@ export const initWebSocket = (token, onNotice) => {
     connectHeaders: {
       Authorization: `Bearer ${token}`,
     },
-    debug: (str) => console.log("STOMP: ", str),
+    // debug: (str) => console.log("STOMP: ", str),
 
     onConnect: () => {
       // console.log("Connected");

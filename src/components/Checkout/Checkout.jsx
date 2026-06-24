@@ -225,6 +225,7 @@ export default function Checkout({ onNavigate }) {
     handleDecrement,
     handleBedDecrement,
     setQty,
+    isBedProduct,
     clearCart,
   } = useCart();
   const products = useAllProducts();
@@ -447,7 +448,7 @@ export default function Checkout({ onNavigate }) {
                             qty={item.qty}
                             onInc={(e) => handleIncrement(item.id, e)}
                             onDec={(e) =>
-                              item.cats?.includes("bed")
+                              isBedProduct(item)
                                 ? handleBedDecrement(item.id, e)
                                 : handleDecrement(item.id, e)
                             }
@@ -462,7 +463,7 @@ export default function Checkout({ onNavigate }) {
                         <td className="co-remove">
                           <button
                             className="co-remove__btn"
-                            onClick={() => setQty(item.id, 0)}
+                            onClick={() => setQty(item, 0)}
                           >
                             <svg
                               width="14"
