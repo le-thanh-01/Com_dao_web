@@ -41,7 +41,7 @@ const getCountableBeds = (productsList) =>
  * @returns {{ isBlocked: boolean, isTopping: boolean, isDrink: boolean, qty: number }}
  */
 const evaluateProductQuota = (productId, targetCart, productsList) => {
-  const qty = targetCart[productId] || 0;
+  const qty = targetCart[productId]?.quantity || 0;
   const product = productsList.find((p) => p.id === productId);
   if (!product) return { isBlocked: false, isDrink: false, qty: 0 };
 
@@ -54,7 +54,7 @@ const evaluateProductQuota = (productId, targetCart, productsList) => {
   // THAY ĐỔI: chỉ đếm bed được phép, loại trừ id trong QUOTA_EXCLUDED_BED_IDS
   const countableBeds = getCountableBeds(productsList);
   const totalBeds = countableBeds.reduce(
-    (s, p) => s + (targetCart[p.id] || 0),
+    (s, p) => s + (targetCart[p.id]?.quantity || 0),
     0,
   );
   const hasBed = totalBeds > 0;
@@ -76,7 +76,10 @@ const evaluateProductQuota = (productId, targetCart, productsList) => {
 
   const drinks = productsList.filter((p) => p.id > 30 && p.id < 40);
   // console.log("drink: ", drinks);
-  const usedDrinks = drinks.reduce((s, p) => s + (targetCart[p.id] || 0), 0);
+  const usedDrinks = drinks.reduce(
+    (s, p) => s + (targetCart[p.id]?.quantity || 0),
+    0,
+  );
   const maxDrinks = totalBeds * 1;
 
   isBlocked =
@@ -131,13 +134,14 @@ const clearExtrasAfterBedDecrement = (updatedCart, productsList) => {
 
   // Hết toàn bộ bed được tính quota → xoá sạch topping và drink
   const result = { ...updatedCart };
-  const _isDrink = (p) => p.id > 30 && p.id < 40;
-  const _isTopping = (p) => p.id > 13 && p.id < 31;
-  productsList.forEach((p) => {
-    if (_isDrink(p)) {
-      delete result[p.id];
+  const _isDrink = (p) => p > 30 && p < 40;
+  const _isTopping = (p) => p > 13 && p < 31;
+  for (const key in result) {
+    // Kiểm tra điều kiện cần xoá (Ví dụ: key bắt đầu bằng chuỗi '_temp')
+    if (_isDrink(key)) {
+      delete result[key];
     }
-  });
+  }
   return result;
 };
 
@@ -188,6 +192,8 @@ export function CartProvider({
    * findIndex() cập nhật sản phẩm đã có trong hàng đợi
    */
   const enqueueUpdate = (productId, newQuantity) => {
+    const cartItem = cartRef.current[productId] || {};
+
     const existingIndex = updateQueue.current.findIndex(
       (item) => item.product_id === Number(productId),
     );
@@ -198,6 +204,7 @@ export function CartProvider({
     } else {
       // Tạo tác vụ mới nếu chưa tồn tại trong hàng đợi
       updateQueue.current.push({
+        id: cartItem.id,
         product_id: Number(productId),
         quantity: newQuantity,
       });
@@ -215,9 +222,12 @@ export function CartProvider({
 
     const currentUpdate = updateQueue.current.shift();
     // console.log("currentUpdateCart: ", onCartChange);
+    let response;
 
     try {
-      await onCartChange(currentUpdate);
+      if (currentUpdate.quantity === 0)
+        response = await onCartChange(currentUpdate, "del");
+      else response = await onCartChange(currentUpdate, "update");
     } catch (error) {
       console.error("Lỗi đồng bộ hóa với Server:", error);
     } finally {
@@ -228,13 +238,25 @@ export function CartProvider({
 
   /* ── Raw mutators ── */
   const increment = useCallback((id) => {
-    cartRef.current[id] = (cartRef.current[id] || 0) + 1;
-    setCart((p) => ({ ...p, [id]: (p[id] || 0) + 1 }));
-    enqueueUpdate(id, cartRef.current[id]);
+    const currentItem = cartRef.current[id] || {
+      product_id: Number(id),
+      quantity: 0,
+    };
+    const newQuantity = currentItem.quantity + 1;
+
+    cartRef.current = {
+      ...cartRef.current,
+      [id]: { ...currentItem, quantity: newQuantity },
+    };
+    setCart(cartRef.current);
+    enqueueUpdate(id, newQuantity);
   }, []);
 
   const decrement = useCallback((id) => {
-    const currentQuantity = cartRef.current[id] || 0;
+    const currentItem = cartRef.current[id];
+    if (!currentItem) return;
+
+    const currentQuantity = currentItem.quantity || 0;
     if (currentQuantity <= 0) return;
 
     const newQuantity = currentQuantity - 1;
@@ -245,53 +267,65 @@ export function CartProvider({
     } else {
       cartRef.current = {
         ...cartRef.current,
-        [id]: newQuantity,
+        [id]: { ...currentItem, quantity: newQuantity },
       };
     }
     setCart(cartRef.current);
-
     enqueueUpdate(id, newQuantity);
   }, []);
 
-  const setQty = useCallback((product, qty) => {
-    if (qty <= 0) {
-      const { [product.id]: _, ...rest } = cartRef.current;
-      let nextState = rest;
-      if (isBedProduct(product)) {
-        const currentCartState = cartRef.current;
-        nextState = clearExtrasAfterBedDecrement(nextState, products);
-        const changedItems = {};
-
-        changedItems[product.id] = qty;
-
-        Object.keys(currentCartState).forEach((key) => {
-          if (key != String(product.id)) {
-            const oldVal = currentCartState[key];
-            const newVal = nextState[key] || 0;
-
-            if (oldVal !== newVal) {
-              changedItems[key] = newVal;
-            }
-          }
-        });
-
-        cartRef.current = nextState;
-        setCart(nextState);
-
-        Object.entries(changedItems).forEach(([id, qty]) => {
-          enqueueUpdate(id, qty);
-        });
-      } else cartRef.current = rest;
-    } else {
-      cartRef.current = {
-        ...cartRef.current,
-        [id]: qty,
+  const setQty = useCallback(
+    (product, qty) => {
+      const productId = product.id;
+      const currentItem = cartRef.current[productId] || {
+        product_id: Number(productId),
+        quantity: 0,
       };
-    }
-    setCart(cartRef.current);
 
-    enqueueUpdate(product.id, newQuantity);
-  }, []);
+      if (qty <= 0) {
+        const { [productId]: _, ...rest } = cartRef.current;
+        let nextState = rest;
+
+        if (isBedProduct(product)) {
+          const currentCartState = cartRef.current;
+          nextState = clearExtrasAfterBedDecrement(nextState, products);
+          const changedItems = {};
+
+          changedItems[productId] = qty;
+
+          Object.keys(currentCartState).forEach((key) => {
+            if (key != String(productId)) {
+              const oldVal = currentCartState[key]?.quantity || 0;
+              const newVal = nextState[key]?.quantity || 0;
+
+              if (oldVal !== newVal) {
+                changedItems[key] = newVal;
+              }
+            }
+          });
+
+          cartRef.current = nextState;
+          setCart(nextState);
+
+          Object.entries(changedItems).forEach(([id, q]) => {
+            enqueueUpdate(id, q);
+          });
+        } else {
+          cartRef.current = rest;
+          setCart(cartRef.current);
+          enqueueUpdate(productId, qty);
+        }
+      } else {
+        cartRef.current = {
+          ...cartRef.current,
+          [productId]: { ...currentItem, quantity: qty },
+        };
+        setCart(cartRef.current);
+        enqueueUpdate(productId, qty);
+      }
+    },
+    [products],
+  );
 
   const clearCart = useCallback(() => setCart({}), []);
 
@@ -302,9 +336,15 @@ export function CartProvider({
     // const tops = products.filter((p) => p.cats?.includes("topping"));
     const drinks = products.filter((p) => p.id > 30 && p.id < 40);
 
-    const totalBeds = countableBeds.reduce((s, p) => s + (cart[p.id] || 0), 0);
+    const totalBeds = countableBeds.reduce(
+      (s, p) => s + (cart[p.id]?.quantity || 0),
+      0,
+    );
     // const usedToppings = tops.reduce((s, p) => s + (cart[p.id] || 0), 0);
-    const usedDrinks = drinks.reduce((s, p) => s + (cart[p.id] || 0), 0);
+    const usedDrinks = drinks.reduce(
+      (s, p) => s + (cart[p.id]?.quantity || 0),
+      0,
+    );
     // const maxToppings = totalBeds * 2;
     const maxDrinks = totalBeds * 1;
 
@@ -350,14 +390,19 @@ export function CartProvider({
         products,
       );
       if (isBlocked) return;
+
+      const currentItem = cartRef.current[productId] || {
+        product_id: Number(productId),
+        quantity: 0,
+      };
+      const newQuantity = currentItem.quantity + 1;
       //cập nhật cart ref
       cartRef.current = {
         ...cartRef.current,
-        [productId]: (cartRef.current[productId] || 0) + 1,
+        [productId]: { ...currentItem, quantity: newQuantity },
       };
-      //cập nhật cart state
       setCart(cartRef.current);
-      enqueueUpdate(productId, cartRef.current[productId]);
+      enqueueUpdate(productId, newQuantity);
     },
     [products],
   );
@@ -375,19 +420,19 @@ export function CartProvider({
 
   /**
    * TÍNH NĂNG MỚI: handleBedDecrement
-   * Dành riêng cho sản phẩm thuộc category "Bed".
-   * Sau khi giảm Bed, tự động trim topping/drink vượt quota mới.
+   * Dành riêng cho sản phẩm thuộc category "Bed" và "Set".
+   * Sau khi giảm Bed/Set, tự động trim drink vượt quota mới.
    *
-   * Luồng: prevCart → giảm Bed → tính quota mới → trim extras → commit
-   * Toàn bộ trong một BedCart() duy nhất → atomic, không flash UI trung gian.
    */
   const handleBedDecrement = useCallback(
     (productId, e) => {
       e?.stopPropagation();
 
       const currentCartState = cartRef.current;
-      const currentQty = currentCartState[productId] || 0;
+      const currentItem = currentCartState[productId];
+      if (!currentItem) return;
 
+      const currentQty = currentItem.quantity || 0;
       if (currentQty <= 0) return;
 
       let nextCartState = { ...currentCartState };
@@ -396,19 +441,18 @@ export function CartProvider({
       if (newQty <= 0) {
         delete nextCartState[productId];
       } else {
-        nextCartState[productId] = newQty;
+        nextCartState[productId] = { ...currentItem, quantity: newQty };
       }
-      // console.log("currentcartstate: ", currentCartState);
-      nextCartState = clearExtrasAfterBedDecrement(nextCartState, products);
-      // console.log("nextCartstate: ", nextCartState);
-      const changedItems = {};
 
+      nextCartState = clearExtrasAfterBedDecrement(nextCartState, products);
+
+      const changedItems = {};
       changedItems[productId] = newQty;
 
       Object.keys(currentCartState).forEach((key) => {
         if (key != String(productId)) {
-          const oldVal = currentCartState[key];
-          const newVal = nextCartState[key] || 0;
+          const oldVal = currentCartState[key]?.quantity || 0;
+          const newVal = nextCartState[key]?.quantity || 0;
 
           if (oldVal !== newVal) {
             changedItems[key] = newVal;
@@ -423,11 +467,11 @@ export function CartProvider({
         enqueueUpdate(id, qty);
       });
     },
-    [products], // Lưu ý: Nếu có quy tắc linter nghiêm ngặt, cần thêm enqueueUpdate vào dependency array
+    [products],
   );
 
   const totalItems = useMemo(
-    () => Object.values(cart).reduce((s, q) => s + q, 0),
+    () => Object.values(cart).reduce((s, item) => s + (item?.quantity || 0), 0),
     [cart],
   );
 

@@ -252,7 +252,7 @@ function QuotaBanner({ type, quota }) {
             </svg>
           </span>
           <div className="quota-banner__text">
-            Chưa có Cơm trong giỏ hàng. Mỗi <strong>Suất</strong> được kèm{" "}
+            Chưa có Cơm/Set trong giỏ hàng. Mỗi <strong>Suất</strong> được kèm{" "}
             <strong>1 đồ uống</strong>.
           </div>
         </div>
@@ -295,12 +295,12 @@ function QuotaBanner({ type, quota }) {
         <div className="quota-banner__text">
           {drinkFull ? (
             <>
-              Đã dùng hết đồ uống. Bạn có <strong>{totalBeds} Suất cơm</strong>{" "}
-              → tối đa <strong>{maxDrinks} đồ uống</strong>.
+              Đã dùng hết đồ uống. Bạn có <strong>{totalBeds} Cơm/Set</strong> →
+              tối đa <strong>{maxDrinks} đồ uống</strong>.
             </>
           ) : (
             <>
-              Bạn có <strong>{totalBeds} Suất cơm</strong> → được chọn thêm{" "}
+              Bạn có <strong>{totalBeds} Cơm/Set </strong> → được chọn thêm{" "}
               <strong>{maxDrinks - usedDrinks} đồ uống</strong> (còn{" "}
               {maxDrinks - usedDrinks}/{maxDrinks}).
             </>

@@ -258,11 +258,11 @@ export default function Checkout({ onNavigate }) {
   const [QROpen, setQROpen] = useState(false);
   /* ── computed ── */
   const cartItems = products
-    .filter((p) => cart[p.id] > 0)
+    .filter((p) => cart[p.id]?.quantity > 0)
     .map((p) => ({
       ...p,
-      qty: cart[p.id],
-      subtotal: p.price * cart[p.id],
+      qty: cart[p.id]?.quantity,
+      subtotal: p.price * cart[p.id]?.quantity,
     }));
 
   const subtotal = cartItems.reduce((s, i) => s + i.subtotal, 0);

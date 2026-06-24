@@ -18,8 +18,7 @@ export default function Navbar({
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
   const { totalItems } = useCart();
-
-  const { unreadCount } = useNotices();
+  const { totalNotice } = useNotices();
 
   return (
     <nav className="navbar">
@@ -53,8 +52,11 @@ export default function Navbar({
                 {link === "Thông báo" ? (
                   <span className="notice-trigger">
                     {link}
-                    {unreadCount > 0 && (
-                      <span className="notice-trigger__dot" />
+                    {totalNotice > 0 && (
+                      // <span className="notice-trigger__dot" />
+                      <span className="navbar__cart-badge forNotice">
+                        {totalNotice > 99 ? "99+" : totalNotice}
+                      </span>
                     )}
                   </span>
                 ) : (
@@ -132,8 +134,11 @@ export default function Navbar({
                   {link === "Thông báo" ? (
                     <span className="notice-trigger">
                       {link}
-                      {unreadCount > 0 && (
-                        <span className="notice-trigger__dot" />
+                      {totalNotice > 0 && (
+                        // <span className="notice-trigger__dot" />
+                        <span className="navbar__cart-badge forNotice">
+                          {totalNotice > 99 ? "99+" : totalNotice}
+                        </span>
                       )}
                     </span>
                   ) : (

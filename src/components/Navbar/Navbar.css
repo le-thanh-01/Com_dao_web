@@ -125,7 +125,7 @@
   height: 18px;
   border-radius: var(--radius-full);
   background: var(--accent);
-  color: #111;
+  color: var(--user-menu-btn-primary);
   font-size: 10px;
   font-weight: 800;
   display: flex;
@@ -135,7 +135,11 @@
   border: 2px solid var(--bg);
   animation: badgePop 0.2s ease;
 }
-
+.navbar__cart-badge.forNotice {
+  top: -12px;
+  right: -14px;
+  background: var(--red);
+}
 .desktop-menu {
   display: flex;
   flex-grow: 1;

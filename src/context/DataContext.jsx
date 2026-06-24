@@ -386,10 +386,10 @@ export function DataProvider({ children }) {
   const userCart = useResource(fetchCartWrapper, isLoggedIn);
 
   const updateUserCart = useCallback(
-    async (cartData) => {
-      // console.log("CART_DATACONTEXT", cartData);
+    async (cartData, mode) => {
+      // console.log("CART_DATACONTEXT", {cartData,mode});
       return withTokenGuard(async () => {
-        const result = await updateCart(cartData);
+        const result = await updateCart(cartData, mode);
         if (!result.error) userCart.refetch();
         return result;
       });
@@ -399,15 +399,18 @@ export function DataProvider({ children }) {
 
   /* ── Notices ── */
   const [socketNotice, setSocketNotice] = useState([]);
+  const totalNotice = useMemo(() => {
+    return socketNotice.length;
+  }, [socketNotice]);
 
   useEffect(() => {
-    // if (!loginState) return;
+    if (!loginState) return;
     fetchNotices().then(({ data, error }) => {
       if (!error) {
         setSocketNotice(data.content);
       }
     });
-  }, []); // eslint-disable-line
+  }, [loginState]); // eslint-disable-line
 
   const formatAndPushNotice = (type, rawData) => {
     let payload = rawData;
@@ -612,7 +615,11 @@ export function DataProvider({ children }) {
     async (id) => {
       return withTokenGuard(async () => {
         const result = await cancelOrder(id);
-        if (!result.error) {
+        if (
+          !result.error ||
+          result.error ==
+            "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+        ) {
           await fetchOrdersForStatus("pending");
           await fetchOrdersForStatus("history");
         }
@@ -626,7 +633,11 @@ export function DataProvider({ children }) {
     async (id) => {
       return withTokenGuard(async () => {
         const result = await confirmDelivery(id);
-        if (!result.error) {
+        if (
+          !result.error ||
+          result.error ==
+            "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+        ) {
           await fetchOrdersForStatus("pending");
           await fetchOrdersForStatus("history");
         }
@@ -662,6 +673,7 @@ export function DataProvider({ children }) {
         changePassword,
       },
       notices: {
+        totalNotice,
         data: socketNotice,
         loading: false,
         error: null,
@@ -692,6 +704,7 @@ export function DataProvider({ children }) {
       delUser,
       changePassword,
       socketNotice,
+      totalNotice,
       InvoiceRequest,
       QRloading,
       fetchQRForId,
@@ -773,6 +786,7 @@ export const useNotices = () => {
     notices: notices.data ?? [],
     loading: notices.loading,
     error: notices.error,
+    totalNotice: notices.totalNotice,
   };
 };
 export const useUserCart = () => {

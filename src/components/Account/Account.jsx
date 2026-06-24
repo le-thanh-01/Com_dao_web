@@ -4,6 +4,7 @@ import {
   useOrders,
   useUserSettings,
   useAuth,
+  useInvoice,
 } from "../../context/DataContext";
 import Navbar from "../Navbar/Navbar";
 import Footer from "../Footer/Footer";
@@ -51,7 +52,7 @@ const Toggle = ({ checked, onChange }) => (
 const OrderCard = ({ order, onCancel, onConfirm, type }) => {
   const [QROpen, setQROpen] = useState(false);
   const st = STATUS_MAP[order.state];
-
+  // console.log("type: ", type, "\nonConfirm: ", onConfirm);
   // console.log(order);
   // id của action đang loading trên card này: "cancel" | "confirm" | null
   const [actionLoading, setActionLoading] = useState(null);
@@ -62,22 +63,29 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
     setActionLoading("cancel");
     const { error } = await onCancel(order.id);
     setActionLoading(null);
-    if (error) setActionError(error);
+    if (
+      error &&
+      error !=
+        "Lỗi kết nối: Failed to execute 'json' on 'Response': Unexpected end of JSON input"
+    )
+      setActionError(error);
   };
 
   const handleConfirm = async () => {
     setActionError("");
     //confirm này là của khách, không phải trạng thái đã nhận đơn CONFIRMED
     setActionLoading("confirm");
-    const { error } = await onConfirm(order.id);
+    const result =
+      type == "history" ? onConfirm(order.id) : await onConfirm(order.id);
     setActionLoading(null);
-    if (error) setActionError(error);
+    if (result?.error) setActionError(result?.error);
   };
 
-  const isPending =
+  const canContact =
     order.state === "CONFIRMED" ||
     order.state === "PAYING" ||
-    order.state === "DELIVERING";
+    order.state === "DELIVERING" ||
+    order.state === "FINISHED";
 
   return (
     <div className="order-card">
@@ -115,7 +123,7 @@ const OrderCard = ({ order, onCancel, onConfirm, type }) => {
       </div>
 
       {/* Hành động — chỉ hiện khi đơn đang pending và có handler được truyền vào */}
-      {isPending && (onCancel || onConfirm) && (
+      {canContact && (onCancel || onConfirm) && (
         <div className="order-card__actions">
           {actionError && (
             <div className="order-card__action-error">{actionError}</div>
@@ -957,7 +965,8 @@ function PanelHistory() {
     error,
     fetchOrdersForStatus,
   } = useOrders("history");
-  console.log("historyorder: ", historyOrders);
+  // console.log("historyorder: ", historyOrders);
+  const { invoiceRequest } = useInvoice();
   const delivered = historyOrders.filter((o) => o.state === "FINISHED");
   const cancelled = historyOrders.filter((o) => o.state === "CANCELLED");
   useEffect(() => {
@@ -1022,7 +1031,7 @@ function PanelHistory() {
             <OrderCard
               key={o.id}
               order={o}
-              onConfirm={() => invoiceRequest(orderId)}
+              onConfirm={invoiceRequest}
               type={"history"}
             />
           ))

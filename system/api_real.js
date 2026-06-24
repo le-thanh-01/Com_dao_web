@@ -7,7 +7,7 @@ import { Client } from "@stomp/stompjs";
 
 export let BASE_URL =
   localStorage.getItem("url") ??
-  "https://belts-variance-useful-flyer.trycloudflare.com";
+  "https://pending-dem-personals-residence.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
@@ -252,7 +252,11 @@ export async function fetchCart() {
   if (error) return respond(data.content);
   // console.log("datacart", data);
   const formattedCart = data.content.reduce((acc, item) => {
-    acc[item.product.id] = item.quantity;
+    acc[item.product.id] = {
+      id: item.id,
+      product_id: item.product,
+      quantity: item.quantity,
+    };
     return acc;
   }, {});
   const productCart = data.content.map((item) => item.product);
@@ -261,12 +265,17 @@ export async function fetchCart() {
 }
 
 /** PUT /cart */
-export async function updateCart(cartData) {
-  // console.log("CARTDATA: ", cartData);
-  return safeFetch(`${BASE_URL}/api/v1/cart/add`, {
-    method: "POST",
+export async function updateCart(cartData, mode) {
+  console.log("CARTDATA: ", cartData);
+  const endpoint = mode == "del" ? `delete?id=${cartData.id}` : "add";
+  const method = mode == "del" ? "DELETE" : "POST";
+  return safeFetch(`${BASE_URL}/api/v1/cart/${endpoint}`, {
+    method: method,
     headers: authHeaders(),
-    body: JSON.stringify(cartData),
+    body: JSON.stringify({
+      product_id: cartData.product_id,
+      quantity: cartData.quantity,
+    }),
   });
 }
 
@@ -348,9 +357,9 @@ export async function confirmDelivery(id) {
 /**fetch notices */
 
 export async function fetchNotices() {
-  return safeFetch(`${BASE_URL}/api/v1/notice?page=0&size=10`, {
+  return safeFetch(`${BASE_URL}/api/v1/notice`, {
     method: "GET",
-    headers: baseHeaders(),
+    headers: authHeaders(),
   });
 }
 
@@ -388,7 +397,9 @@ export const initWebSocket = (token, onNotice) => {
     connectHeaders: {
       Authorization: `Bearer ${token}`,
     },
-    // debug: (str) => console.log("STOMP: ", str),
+    debug: (str) => {
+      console.log("STOMP: ", str);
+    },
 
     onConnect: () => {
       // console.log("Connected");
