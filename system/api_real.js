@@ -236,7 +236,7 @@ export async function updatePassword(patch) {
 
 /** DELETE /user */
 export async function disableUser(patch) {
-  return safeFetch(`${BASE_URL}/api/v1/user?confirm=true`, {
+  return safeFetch(`${BASE_URL}/api/v1/user/disable?confirm=true`, {
     method: "DELETE",
     headers: authHeaders(),
     body: JSON.stringify(patch),
