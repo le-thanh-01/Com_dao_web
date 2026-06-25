@@ -7,7 +7,7 @@ import { Client } from "@stomp/stompjs";
 
 export let BASE_URL =
   localStorage.getItem("url") ??
-  "https://pending-dem-personals-residence.trycloudflare.com";
+  "https://newsletter-dogs-mug-glass.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
