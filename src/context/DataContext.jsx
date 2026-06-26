@@ -367,9 +367,9 @@ export function DataProvider({ children }) {
     [withTokenGuard, userSettings.refetch],
   );
 
-  const delUser = useCallback(async () => {
+  const delUser = useCallback(async (patch) => {
     return withTokenGuard(async () => {
-      const result = await disableUser();
+      const result = await disableUser(patch);
       if (!result.error) userSettings.refetch();
       return result;
     });
