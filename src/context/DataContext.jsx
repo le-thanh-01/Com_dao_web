@@ -4,23 +4,14 @@
  * Cung cấp dữ liệu từ server (qua api.js) cho toàn bộ app.
  * Mỗi resource có 3 trạng thái riêng: { data, loading, error }.
  *
- * Hook tiện ích:
- *   useProducts()    → { products, loading, error }
- *   useCategories()  → { categories, loading, error }
- *   useFooterLinks() → { footerLinks, loading, error }
- *   useNotices()     → { notices, loading, error, markRead, markAllRead }
- *   useOrders()      → { orders, pendingOrders, historyOrders, loading, error }
- *   useUserProfile() → { user, loading, error, updateProfile }
+ *  * 1. fetchLoginState() gọi server khi app reload để kiểm tra
+ *    token còn hạn.
  *
- *  * 1. [MỚI] fetchLoginState() gọi server khi app reload để kiểm tra
- *    token còn hạn — không chỉ đọc sessionStorage.
- *
- *    2. [MỚI] Products được fetch theo từng category đang hiển thị
- *    (fetchProductsByCategory), tối đa PRODUCTS_PAGE_SIZE = 10 mỗi lần.
+ *    2. Products được fetch theo từng category đang hiển thị (fetchProductsByCategory).
  *    useProductsByCategory(category) refetch khi category thay đổi.
  *
- *    3. [MỚI] withTokenGuard bắt lỗi JWT_EXPIRED từ bất kỳ call nào
- *    → hiển thị toast + doLogout() + trả về để App có thể navigate.
+ *    3. withTokenGuard bắt lỗi JWT_EXPIRED từ bất kỳ call nào
+ *    → doLogout() + trả về để App có thể navigate.
  *
  * ──────────────────────────────────────────────────────────────
  */
@@ -62,6 +53,7 @@ import {
   updatePassword,
   disableUser,
 } from "../../system/api";
+import { useToast } from "./ToastContext";
 /* ── helpers ── */
 const initial = { data: null, loading: true, error: null };
 
@@ -101,13 +93,7 @@ const DataContext = createContext(null);
 
 export function DataProvider({ children }) {
   /* ── Toast state — hiển thị khi JWT hết hạn ── */
-  const [toast, setToast] = useState(null); // { message, type }
-  const showToast = useCallback((message, type = "error") => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  /* ── login and logout ── */
+  const { showToast } = useToast(); // { message, type }
 
   /* ── Auth state ────────────────────────────────────────────────────────
      Khôi phục token từ sessionStorage vào api.js module TRƯỚC khi render,
@@ -367,13 +353,16 @@ export function DataProvider({ children }) {
     [withTokenGuard, userSettings.refetch],
   );
 
-  const delUser = useCallback(async () => {
-    return withTokenGuard(async () => {
-      const result = await disableUser();
-      if (!result.error) userSettings.refetch();
-      return result;
-    });
-  }, [withTokenGuard, userSettings.refetch]);
+  const delUser = useCallback(
+    async (patch) => {
+      return withTokenGuard(async () => {
+        const result = await disableUser(patch);
+        if (!result.error) userSettings.refetch();
+        return result;
+      });
+    },
+    [withTokenGuard, userSettings.refetch],
+  );
 
   /* ── cart ── */
   const fetchCartWrapper = async () => {
@@ -655,7 +644,6 @@ export function DataProvider({ children }) {
         login,
         logout,
       },
-      toast,
       products: {
         byCategory: productState.byCategory,
         activeCategory: productState.active,
@@ -693,7 +681,6 @@ export function DataProvider({ children }) {
       loginState,
       login,
       logout,
-      toast,
       productState,
       fetchProductsForCategory,
       categories,
@@ -726,8 +713,6 @@ export function DataProvider({ children }) {
 ════════════════════════════════════════════ */
 
 export const useAuth = () => useContext(DataContext).auth;
-
-export const useToast = () => useContext(DataContext).toast;
 
 export const useAllProducts = () => {
   const { products } = useContext(DataContext);

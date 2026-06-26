@@ -1,4 +1,5 @@
 import { CartProvider } from "./CartContext";
+import { ToastProvider } from "./ToastContext";
 import {
   DataProvider,
   useAuth,
@@ -25,8 +26,10 @@ function CartBridge({ children }) {
 // Component này chỉ làm nhiệm vụ tổ hợp tất cả các Provider
 export const AppProviders = ({ children }) => {
   return (
-    <DataProvider>
-      <CartBridge>{children}</CartBridge>
-    </DataProvider>
+    <ToastProvider>
+      <DataProvider>
+        <CartBridge>{children}</CartBridge>
+      </DataProvider>
+    </ToastProvider>
   );
 };

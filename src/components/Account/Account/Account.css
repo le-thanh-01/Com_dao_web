@@ -1,0 +1,231 @@
+.account-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+.account-body {
+  flex: 1;
+  display: flex;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 28px;
+  gap: 24px;
+}
+
+/* ════════════════════════════
+   SIDEBAR
+════════════════════════════ */
+.account-sidebar {
+  flex: 0 0 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Avatar card */
+.account-sidebar__profile-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.account-sidebar__avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.account-sidebar__avatar svg {
+  stroke: var(--accent);
+}
+
+.account-sidebar__avatar-edit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.account-sidebar__avatar-edit svg {
+  stroke: #111;
+}
+
+.account-sidebar__name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.3;
+}
+
+.account-sidebar__phone {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.account-sidebar__phone svg {
+  stroke: var(--text-dim);
+}
+
+.account-sidebar__badge {
+  background: var(--accent-soft);
+  border: 1px solid rgba(200, 169, 110, 0.3);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+}
+
+/* Nav menu */
+.account-sidebar__nav {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.account-sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  border-left: 3px solid transparent;
+  transition: all var(--transition-fast);
+  border-bottom: 1px solid var(--border);
+}
+
+.account-sidebar__nav-item:last-child {
+  border-bottom: none;
+}
+
+.account-sidebar__nav-item:hover {
+  color: var(--text);
+  background: var(--surface2);
+}
+
+.account-sidebar__nav-item--active {
+  color: var(--accent);
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.account-sidebar__nav-item--active:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.account-sidebar__nav-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+}
+
+.account-sidebar__nav-item--danger {
+  color: #ff7c6e;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+.account-sidebar__nav-item--danger:hover {
+  background: rgba(214, 79, 60, 0.08);
+  color: #ff7c6e;
+}
+
+/* ════════════════════════════
+   MAIN CONTENT
+════════════════════════════ */
+.account-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.account-content__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.account-content__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.account-content__subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Empty state ── */
+.account-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 0;
+  gap: 12px;
+}
+
+.account-empty__icon {
+  opacity: 0.2;
+}
+.account-empty__text {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .account-body {
+    flex-direction: column;
+    padding: 20px 16px;
+  }
+  .account-sidebar {
+    flex: none;
+    width: 100%;
+  }
+  .account-profile__grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -7,7 +7,7 @@ import { Client } from "@stomp/stompjs";
 
 export let BASE_URL =
   localStorage.getItem("url") ??
-  "https://newsletter-dogs-mug-glass.trycloudflare.com";
+  "https://fraser-reserved-yes-onion.trycloudflare.com";
 
 /** Số sản phẩm tối đa mỗi lần tải */
 export const PRODUCTS_PAGE_SIZE = 10;
@@ -118,7 +118,7 @@ export async function register(fields) {
   if (!firstName || !lastName || (!email && !phone) || !password)
     return fail("Vui lòng điền đầy đủ thông tin.");
 
-  if (password.length < 6) return fail("Mật khẩu phải có ít nhất 6 ký tự.");
+  if (password.length < 8) return fail("Mật khẩu phải có ít nhất 8 ký tự.");
   console.log("đã thực hiện register");
   return safeFetch(`${BASE_URL}/api/v1/user/register`, {
     method: "POST",

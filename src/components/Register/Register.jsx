@@ -19,7 +19,9 @@ function validate(fields) {
   if (!fields.lastName.trim()) errors.lastName = "Vui lòng nhập họ.";
   if (!fields.firstName.trim()) errors.firstName = "Vui lòng nhập tên.";
   if (!fields.email.trim()) errors.email = "Vui lòng nhập email.";
-  else if (!/\S+@\S+\.\S+/.test(fields.email))
+  else if (
+    !/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(fields.email)
+  )
     errors.email = "Email không hợp lệ.";
   if (!fields.phone.trim()) errors.phone = "Vui lòng nhập số điện thoại.";
   else if (
@@ -28,8 +30,8 @@ function validate(fields) {
   )
     errors.phone = "Số điện thoại không hợp lệ.";
   if (!fields.password.trim()) errors.password = "Vui lòng nhập mật khẩu.";
-  else if (fields.password.length < 6)
-    errors.password = "Mật khẩu tối thiểu 6 ký tự.";
+  else if (fields.password.length < 8)
+    errors.password = "Mật khẩu tối thiểu 8 ký tự.";
   if (!fields.confirm.trim()) errors.confirm = "Vui lòng xác nhận mật khẩu.";
   else if (fields.confirm !== fields.password)
     errors.confirm = "Mật khẩu không khớp.";
@@ -87,8 +89,8 @@ export default function Register({ onNavigate }) {
     ) {
       setErrors((prev) => ({
         ...prev,
-        email: "Email hoặc số điện thoại đã tồn tại",
-        phone: "Email hoặc số điện thoại đã tồn tại",
+        email: "Mất kết nối máy chủ hoặc email đã tồn tại",
+        phone: "Mất kết nối máy chủ hoặc số điện thoại đã tồn tại",
       }));
       return;
     } else

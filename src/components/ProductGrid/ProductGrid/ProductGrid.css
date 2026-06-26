@@ -1,0 +1,29 @@
+/* ── Grid ── */
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 16px;
+}
+
+.product-grid__empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-dim);
+  font-size: 14px;
+}
+.grid-fade-layer {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Trạng thái ẩn */
+.grid-fade-layer--hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Trạng thái hiện */
+.grid-fade-layer--visible {
+  opacity: 1;
+  pointer-events: auto;
+}

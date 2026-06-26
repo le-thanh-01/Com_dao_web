@@ -21,7 +21,7 @@ export default function Login({ onNavigate }) {
     if (!Password) return setError("Vui lòng nhập mật khẩu.");
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^(0|\+84)[3|5|7|8|9][0-9]{8}$/;
+    const phoneRegex = /^[0-9]{9,11}$/;
 
     if (!emailRegex.test(Username) && !phoneRegex.test(Username))
       return setError("số điện thoại / email không hợp lệ");
@@ -31,9 +31,11 @@ export default function Login({ onNavigate }) {
       username: Username,
       password: Password,
     });
-    // console.log(error);
+    console.log(error);
     if (error)
-      return setError("Số điện thoại / email không tồn tại hoặc sai mật khẩu.");
+      return setError(
+        "Mất kết nối máy chủ hoặc Số điện thoại / email không tồn tại hoặc sai mật khẩu.",
+      );
     onNavigate?.("home");
   };
 

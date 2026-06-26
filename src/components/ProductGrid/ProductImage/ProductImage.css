@@ -1,0 +1,22 @@
+.product-card__img-shimmer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.product-card__placeholder {
+  opacity: 0.18;
+  color: var(--text-muted);
+}
+.product-card__img-real {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    transform 0.3s ease,
+    opacity 0.25s ease;
+}

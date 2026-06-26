@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
-import { QRCodeSVG } from "qrcode.react";
-import { useCart } from "../../context/CartContext";
+import { useCart } from "../../../context/CartContext";
 import {
   useAllProducts,
   useOrders,
   useAuth,
-  useUserQR,
-  useInvoice,
-} from "../../context/DataContext";
-import { placeOrder, validatePromo } from "../../../system/api";
-import Navbar from "../Navbar/Navbar";
-import Footer from "../Footer/Footer";
-import { Spinner } from "../Skeleton/Skeleton";
+} from "../../../context/DataContext";
+import { placeOrder, validatePromo } from "../../../../system/api";
+import Navbar from "../../Navbar/Navbar";
+import Footer from "../../Footer/Footer";
+import { Spinner } from "../../Skeleton/Skeleton";
+import { QRScannerModal } from "../QRScannerModal/QRScannerModal";
 import "./Checkout.css";
 
 /* ─── helpers ─── */
@@ -77,145 +75,6 @@ const Stepper = ({ qty, onInc, onDec }) => (
     </button>
   </div>
 );
-function QRScanner(orderId = 1) {
-  const { loading, fetchQR } = useUserQR();
-  const [QRLink, setQRLink] = useState(null);
-  useEffect(() => {
-    if (!orderId) return;
-
-    const targetId = typeof orderId === "object" ? orderId.id : orderId;
-    // console.log("TẢGETID: ", targetId);
-    const loadQR = async () => {
-      const { data, error } = await fetchQR(targetId);
-      if (!error) {
-        setQRLink(data.qr_code);
-        // console.log("Dữ liệu QRLink: ", { data, error });
-      } else {
-        // console.error("Lỗi từ QRScanner: ", error);
-      }
-    };
-
-    loadQR();
-  }, [fetchQR]);
-
-  return (
-    <>
-      <div className="co-bank-qr__box">
-        {QRLink ? (
-          <QRCodeSVG
-            value={QRLink}
-            size={250} // Kích thước cạnh của ma trận (pixel)
-            bgColor={"#ffffff"} // Mã màu nền (Hex)
-            fgColor={"#000000"} // Mã màu của các module (điểm ảnh QR)
-            level={"M"} // Mức độ nội suy sửa lỗi (Error Correction)
-          />
-        ) : (
-          !loading && <div className="co-bank-qr__box">🔳</div>
-        )}
-      </div>
-
-      {loading && (
-        <div>
-          <Spinner size={14} color="#111" />
-          {/* <div className="co-bank-qr__box">🔳</div> */}
-        </div>
-      )}
-    </>
-  );
-}
-export function QRScannerModal({
-  onClose,
-  pushOrder = onClose,
-  orderLoading,
-  orderId = 1,
-}) {
-  const { invoiceRequest } = useInvoice();
-  // Trả về '/' hoặc '/ten-repo/'
-  const baseUrl = import.meta.env.BASE_URL;
-  const path = `${baseUrl.endsWith("/") ? baseUrl : baseUrl + "/"}pages/help.html`;
-  return (
-    <div
-      className="acc-modal-overlay"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
-      <div className="acc-modal">
-        <div className="acc-modal__head ">
-          <div className="title-center">
-            <div className="acc-modal__title">Thanh toán</div>
-            <div className="acc-modal__subtitle">
-              Vui lòng quét mã QR dưới đây để thanh toán
-            </div>
-          </div>
-          <button
-            className="acc-modal__close"
-            onClick={onClose}
-            aria-label="Đóng"
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="acc-modal__body">
-          <div>
-            <div className="co-bank-qr">
-              <QRScanner id={orderId} />
-            </div>
-          </div>
-        </div>
-        <div className="QR-notices">
-          <ul>
-            <li>
-              <p>
-                Đơn hàng sẽ được xử lý sau khoảng 5 phút kể từ khi thanh toán
-                thành công.
-              </p>
-            </li>
-            <li>
-              <p>
-                Nếu trang web chưa cập nhật sau khi thanh toán, vui lòng reload
-                lại trang.
-              </p>
-            </li>
-            <li>
-              <p>
-                Trường hợp gặp sự cố khi thanh toán, vui lòng
-                <strong> reload lại trang</strong>,
-                <strong> kiểm tra tình trạng mạng </strong>
-                {/* <strong onClick={() => invoiceRequest(orderId)}>
-                  {" "}
-                  nhận hoá đơn thanh toán qua email{" "}
-                </strong> */}
-                hoặc{" "}
-                <a href={path} target="_blank" rel="noopener noreferrer">
-                  <strong> liên hệ CSKH</strong>
-                </a>
-                .
-              </p>
-            </li>
-          </ul>
-        </div>
-        <div className="acc-modal__footer">
-          {
-            <>
-              <button className="account-btn" onClick={onClose}>
-                Huỷ
-              </button>
-              <button
-                className="account-btn account-btn--primary"
-                onClick={() => pushOrder(false)}
-                disabled={orderLoading}
-                style={{ display: "flex", alignItems: "center", gap: 6 }}
-              >
-                {orderLoading && <Spinner size={14} color="#111" />}
-                {orderLoading ? "Đang xử lý..." : "Xác nhận"}
-              </button>
-            </>
-          }
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ─── Main component ─── */
 export default function Checkout({ onNavigate }) {
@@ -230,31 +89,24 @@ export default function Checkout({ onNavigate }) {
   } = useCart();
   const products = useAllProducts();
   const { refetch: refetchOrders } = useOrders();
-
   //check-loginStatus
   const { loginState } = useAuth();
-
   // Pre-order
   const [note, setNote] = useState("");
-
   // Payment
   const [payment, setPayment] = useState("bank");
-
   // Invoice
   const [wantInvoice, setWantInvoice] = useState(false);
   const [invoiceEmail, setInvoiceEmail] = useState("");
-
   // Promo
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
-
   // Order submission
   const [orderLoading, setOrderLoading] = useState(false);
   const [ordered, setOrdered] = useState(false);
   const [orderId, setOrderId] = useState("");
-
   const [QROpen, setQROpen] = useState(false);
   /* ── computed ── */
   const cartItems = products
@@ -337,15 +189,15 @@ export default function Checkout({ onNavigate }) {
           </div>
           <h2 className="co-success__title">Đặt hàng thành công!</h2>
           <p className="co-success__sub">
-            Đơn hàng của bạn đã được ghi nhận. Chúng tôi sẽ chuẩn bị món ăn ngay
-            cho bạn.
+            Đơn hàng của bạn đã được ghi nhận. Vui lòng vào Tài khoản → Danh
+            sách đơn hàng để thực hiện thanh toán
           </p>
           <div className="co-success__order-id">{orderId}</div>
           <button
             className="co-success__btn"
-            onClick={() => onNavigate("home")}
+            onClick={() => onNavigate("account/orders")}
           >
-            Quay về trang chủ
+            Xem đơn hàng của tôi →
           </button>
           <button
             style={{
@@ -356,9 +208,9 @@ export default function Checkout({ onNavigate }) {
               cursor: "pointer",
               fontFamily: "inherit",
             }}
-            onClick={() => onNavigate("account/orders")}
+            onClick={() => onNavigate("home")}
           >
-            Xem đơn hàng của tôi →
+            Quay về trang chủ
           </button>
         </div>
         <Footer />
@@ -486,101 +338,7 @@ export default function Checkout({ onNavigate }) {
             </div>
           </div>
 
-          {/* 2. Đặt trước */}
-          {/* <div className="co-card">
-            <div className="co-card__head">
-              <span className="co-card__head-num">2</span>
-              <span className="co-card__head-title">Đặt bàn trước</span>
-            </div>
-            <div className="co-card__body">
-              <div className="co-toggle-row">
-                <div className="co-toggle-row__info">
-                  <div className="co-toggle-row__label">Đặt bàn trước</div>
-                  <div className="co-toggle-row__desc">
-                    Chọn bàn và thời gian đến dùng bữa
-                  </div>
-                </div>
-                <Toggle
-                  checked={preorder}
-                  onChange={() => setPreorder((p) => !p)}
-                />
-              </div>
-
-              {preorder && (
-                <div className="co-preorder-fields">
-                  <div className="co-field">
-                    <label className="co-field__label">Ngày đến</label>
-                    <input
-                      className="co-field__input"
-                      type="date"
-                      value={preorderDate}
-                      onChange={(e) => setPreorderDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="co-field">
-                    <label className="co-field__label">Giờ đến</label>
-                    <input
-                      className="co-field__input"
-                      type="time"
-                      value={preorderTime}
-                      onChange={(e) => setPreorderTime(e.target.value)}
-                    />
-                  </div>
-                  <div className="co-field">
-                    <label className="co-field__label">Số khách</label>
-                    <select
-                      className="co-field__select"
-                      value={guestCount}
-                      onChange={(e) => setGuestCount(e.target.value)}
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                        <option key={n} value={n}>
-                          {n} người
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="co-field">
-                    <label className="co-field__label">Chọn bàn</label>
-                    <div className="co-tables">
-                      {TABLES.map((t) => (
-                        <button
-                          key={t.id}
-                          className={`co-table-chip ${selectedTable === t.id ? "co-table-chip--selected" : ""}`}
-                          disabled={!t.available}
-                          onClick={() => setTable(t.id)}
-                        >
-                          {t.label} {!t.available && "✗"}
-                        </button>
-                      ))}
-                    </div>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        color: "var(--text-dim)",
-                        marginTop: 6,
-                      }}
-                    >
-                      Bàn đánh dấu ✗ đã được đặt
-                    </span>
-                  </div>
-                  <div className="co-field co-field--full">
-                    <label className="co-field__label">
-                      Ghi chú cho nhà hàng
-                    </label>
-                    <input
-                      className="co-field__input"
-                      placeholder="VD: cần ghế cho trẻ em, ăn kiêng dị ứng..."
-                      value={note}
-                      onChange={(e) => setNote(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div> */}
-
-          {/* 3. Phương thức thanh toán */}
+          {/* 2. Phương thức thanh toán */}
           <div className="co-card">
             <div className="co-card__head">
               {/* <span className="co-card__head-num">3</span> */}
@@ -659,75 +417,7 @@ export default function Checkout({ onNavigate }) {
             </div>
           </div>
 
-          {/* 4. Xuất hoá đơn */}
-          {/* <div className="co-card">
-            <div className="co-card__head">
-              <span className="co-card__head-num">4</span>
-              <span className="co-card__head-title">Xuất hoá đơn VAT</span>
-            </div>
-            <div className="co-card__body">
-              <div className="co-toggle-row">
-                <div className="co-toggle-row__info">
-                  <div className="co-toggle-row__label">
-                    Yêu cầu xuất hoá đơn
-                  </div>
-                  <div className="co-toggle-row__desc">
-                    Hoá đơn VAT sẽ được gửi qua email trong 24 giờ
-                  </div>
-                </div>
-                <Toggle
-                  checked={wantInvoice}
-                  onChange={() => setWantInvoice((p) => !p)}
-                />
-              </div>
-
-              {wantInvoice && (
-                <div className="co-invoice-fields">
-                  <div className="co-field">
-                    <label className="co-field__label">
-                      Tên công ty / Cá nhân
-                    </label>
-                    <input
-                      className="co-field__input"
-                      placeholder="Công ty TNHH..."
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                    />
-                  </div>
-                  <div className="co-field">
-                    <label className="co-field__label">Mã số thuế</label>
-                    <input
-                      className="co-field__input"
-                      placeholder="0123456789"
-                      value={taxCode}
-                      onChange={(e) => setTaxCode(e.target.value)}
-                    />
-                  </div>
-                  <div className="co-field co-field--full">
-                    <label className="co-field__label">Địa chỉ công ty</label>
-                    <input
-                      className="co-field__input"
-                      placeholder="Số nhà, đường, quận, tỉnh/thành..."
-                      value={companyAddr}
-                      onChange={(e) => setCompanyAddr(e.target.value)}
-                    />
-                  </div>
-                  <div className="co-field co-field--full">
-                    <label className="co-field__label">
-                      Email nhận hoá đơn
-                    </label>
-                    <input
-                      className="co-field__input"
-                      type="email"
-                      placeholder="ketoan@company.vn"
-                      value={invoiceEmail}
-                      onChange={(e) => setInvoiceEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div> */}
+          {/* Ghi chú cho nhà hàng*/}
           <div className="co-field co-field--full">
             <label className="co-field__label">Ghi chú cho nhà hàng</label>
             <input
