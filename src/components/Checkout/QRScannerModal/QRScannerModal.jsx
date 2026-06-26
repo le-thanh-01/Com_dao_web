@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { useUserQR } from "../../../context/DataContext";
 import { Spinner } from "../../Skeleton/Skeleton";
+import "./QRScannerModal.css";
 function QRScanner(orderId = 1) {
   const { loading, fetchQR } = useUserQR();
   const [QRLink, setQRLink] = useState(null);
